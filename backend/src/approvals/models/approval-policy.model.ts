@@ -3,13 +3,14 @@ import { ApprovalPolicyStep } from './approval-policy-step.model';
 
 /**
  * Chooses the approval chain for an expense. The matching active policy with the
- * highest priority wins; ties go to the higher minAmount, then the lower id.
+ * highest priority wins. Ties go to the higher minAmount, then the earliest
+ * creation time, with the UUID as a stable final tie-breaker.
  * category null means the policy applies to every category.
  */
 @Table({ tableName: 'approval_policies' })
 export class ApprovalPolicy extends Model {
-  @Column({ type: DataType.INTEGER.UNSIGNED, autoIncrement: true, primaryKey: true })
-  id!: number;
+  @Column({ type: DataType.UUID, defaultValue: DataType.UUIDV4, primaryKey: true })
+  id!: string;
 
   @AllowNull(false)
   @Column(DataType.STRING(120))

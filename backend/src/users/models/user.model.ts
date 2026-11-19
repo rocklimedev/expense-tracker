@@ -5,8 +5,8 @@ import { Role } from './role.model';
 
 @Table({ tableName: 'users' })
 export class User extends Model {
-  @Column({ type: DataType.INTEGER.UNSIGNED, autoIncrement: true, primaryKey: true })
-  id!: number;
+  @Column({ type: DataType.UUID, defaultValue: DataType.UUIDV4, primaryKey: true })
+  id!: string;
 
   @AllowNull(false)
   @Column(DataType.STRING(120))
@@ -27,8 +27,8 @@ export class User extends Model {
 
   @ForeignKey(() => Role)
   @AllowNull(false)
-  @Column(DataType.INTEGER.UNSIGNED)
-  roleId!: number;
+  @Column(DataType.UUID)
+  roleId!: string;
 
   @BelongsTo(() => Role)
   role!: Role;

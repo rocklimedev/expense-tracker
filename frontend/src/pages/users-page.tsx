@@ -1,7 +1,6 @@
 import { useState, type FormEvent } from 'react';
 import { api } from '@/lib/api';
 import { useFetch } from '@/lib/use-fetch';
-import { ROLE_OPTIONS } from '@/lib/constants';
 import { label } from '@/lib/format';
 import type { AppUser } from '@/lib/types';
 import { Button } from '@/components/ui/button';
@@ -16,10 +15,12 @@ import { StatusBadge } from '@/components/common/status-badge';
 
 export default function UsersPage() {
   const { data, error, reload } = useFetch<AppUser[]>('/users');
+  const { data: roles, error: rolesError } = useFetch<NonNullable<AppUser['role']>[]>('/users/roles');
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [roleId, setRoleId] = useState(String(ROLE_OPTIONS[ROLE_OPTIONS.length - 1].id));
+  const [selectedRoleId, setRoleId] = useState('');
+  const roleId = selectedRoleId || roles?.find((role) => role.name === 'EMPLOYEE')?.id || '';
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<{ kind: 'ok' | 'error'; text: string } | null>(null);
 
@@ -28,7 +29,7 @@ export default function UsersPage() {
     setBusy(true);
     setMessage(null);
     try {
-      await api('/users', { method: 'POST', json: { name, email, password, roleId: Number(roleId) } });
+      await api('/users', { method: 'POST', json: { name, email, password, roleId } });
       setMessage({ kind: 'ok', text: `User ${email} created.` });
       setName(''); setEmail(''); setPassword('');
       reload();
@@ -83,13 +84,15 @@ export default function UsersPage() {
                 <Input type="password" required minLength={8} value={password} onChange={(e) => setPassword(e.target.value)} />
               </Field>
               <Field label="Role">
-                <Select value={roleId} onChange={(e) => setRoleId(e.target.value)}>
-                  {ROLE_OPTIONS.map((r) => <option key={r.id} value={r.id}>{label(r.name)}</option>)}
+                <Select required value={roleId} onChange={(e) => setRoleId(e.target.value)}>
+                  <option value="" disabled>Select a role</option>
+                  {roles?.map((role) => <option key={role.id} value={role.id}>{label(role.name)}</option>)}
                 </Select>
               </Field>
+              {rolesError && <Notice kind="error">{rolesError}</Notice>}
             </CardContent>
             <CardFooter>
-              <Button type="submit" className="w-full" disabled={busy}>{busy ? 'Creating…' : 'Create user'}</Button>
+              <Button type="submit" className="w-full" disabled={busy || !roleId}>{busy ? 'Creating…' : 'Create user'}</Button>
             </CardFooter>
           </form>
         </Card>

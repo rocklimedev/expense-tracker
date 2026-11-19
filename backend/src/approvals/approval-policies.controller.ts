@@ -1,5 +1,5 @@
 import {
-  Body, Controller, Get, Param, ParseFloatPipe, ParseIntPipe, Post, Query, UseGuards,
+  Body, Controller, Get, Param, ParseFloatPipe, ParseUUIDPipe, Post, Query, UseGuards,
 } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { PermissionsGuard } from '../common/guards/permissions.guard';
@@ -36,7 +36,7 @@ export class ApprovalPoliciesController {
 
   @Post(':id/deactivate')
   @RequirePermissions(Permissions.APPROVAL_POLICY_MANAGE)
-  deactivate(@Param('id', ParseIntPipe) id: number) {
+  deactivate(@Param('id', ParseUUIDPipe) id: string) {
     return this.policies.deactivate(id);
   }
 }

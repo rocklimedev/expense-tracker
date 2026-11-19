@@ -12,13 +12,13 @@ export enum TrackerStatus {
 
 @Table({ tableName: 'trackers' })
 export class Tracker extends Model {
-  @Column({ type: DataType.INTEGER.UNSIGNED, autoIncrement: true, primaryKey: true })
-  id!: number;
+  @Column({ type: DataType.UUID, defaultValue: DataType.UUIDV4, primaryKey: true })
+  id!: string;
 
   @ForeignKey(() => User)
   @AllowNull(false)
-  @Column(DataType.INTEGER.UNSIGNED)
-  employeeId!: number;
+  @Column(DataType.UUID)
+  employeeId!: string;
 
   @BelongsTo(() => User, 'employeeId')
   employee!: User;

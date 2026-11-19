@@ -22,4 +22,10 @@ export class UsersController {
   findAll() {
     return this.users.findAll();
   }
+
+  @Get('roles')
+  @RequirePermissions(Permissions.USER_MANAGE)
+  findRoles() {
+    return this.users.findRoles();
+  }
 }

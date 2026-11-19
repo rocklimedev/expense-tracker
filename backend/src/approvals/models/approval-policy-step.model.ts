@@ -5,14 +5,14 @@ import { ApprovalPolicy } from './approval-policy.model';
 
 @Table({ tableName: 'approval_policy_steps', timestamps: false })
 export class ApprovalPolicyStep extends Model {
-  @Column({ type: DataType.INTEGER.UNSIGNED, autoIncrement: true, primaryKey: true })
-  id!: number;
+  @Column({ type: DataType.UUID, defaultValue: DataType.UUIDV4, primaryKey: true })
+  id!: string;
 
   @ForeignKey(() => ApprovalPolicy)
   @Unique({ name: 'uq_policy_step', msg: 'Duplicate step order in policy' })
   @AllowNull(false)
-  @Column(DataType.INTEGER.UNSIGNED)
-  policyId!: number;
+  @Column(DataType.UUID)
+  policyId!: string;
 
   @BelongsTo(() => ApprovalPolicy)
   policy!: ApprovalPolicy;

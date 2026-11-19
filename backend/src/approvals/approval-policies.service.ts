@@ -60,7 +60,7 @@ export class ApprovalPoliciesService {
     });
   }
 
-  async findOne(id: number) {
+  async findOne(id: string) {
     const steps = ApprovalPolicy.associations.steps;
     const policy = await ApprovalPolicy.findByPk(id, {
       include: [steps],
@@ -70,7 +70,7 @@ export class ApprovalPoliciesService {
     return policy;
   }
 
-  async deactivate(id: number) {
+  async deactivate(id: string) {
     const policy = await this.findOne(id);
     await policy.update({ isActive: false });
     return policy;
@@ -87,7 +87,7 @@ export class ApprovalPoliciesService {
         minAmount: { [Op.lte]: amount },
         [Op.or]: [{ category: null }, { category }],
       },
-      order: [['priority', 'DESC'], ['minAmount', 'DESC'], ['id', 'ASC']],
+      order: [['priority', 'DESC'], ['minAmount', 'DESC'], ['createdAt', 'ASC'], ['id', 'ASC']],
     });
     if (!policy) return DEFAULT_STEPS;
 

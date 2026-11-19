@@ -20,8 +20,7 @@ import { StatusBadge } from '@/components/common/status-badge';
 type Feedback = { kind: 'ok' | 'error' | 'info'; text: string } | null;
 
 export default function TrackerDetailPage() {
-  const { id } = useParams();
-  const trackerId = Number(id);
+  const { id: trackerId } = useParams();
   const { user } = useAuth();
 
   const tracker = useFetch<Tracker>(`/trackers/${trackerId}`, [trackerId]);

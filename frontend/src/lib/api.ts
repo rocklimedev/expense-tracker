@@ -51,7 +51,7 @@ export async function api<T>(path: string, init: ApiInit = {}): Promise<T> {
 }
 
 /** Downloads a receipt with the auth header, then opens it in a new tab. */
-export async function openAttachment(id: number) {
+export async function openAttachment(id: string) {
   const token = tokenStore.get();
   const res = await fetch(`${BASE_URL}/attachments/${id}/download`, {
     headers: token ? { Authorization: `Bearer ${token}` } : {},

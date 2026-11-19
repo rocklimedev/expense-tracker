@@ -14,8 +14,8 @@ import { PageHeader } from '@/components/common/page-header';
 import { Notice } from '@/components/common/notice';
 
 interface QueueItem {
-  id: number;
-  employee: { id: number; name: string };
+  id: string;
+  employee: { id: string; name: string };
   category: string;
   amount: number;
   expenseDate: string;
@@ -25,16 +25,16 @@ interface QueueItem {
 }
 
 interface BatchResult {
-  approved: number[];
-  failed: { id: number; error: string }[];
+  approved: string[];
+  failed: { id: string; error: string }[];
 }
 
 export default function ApprovalsPage() {
   const { can } = useAuth();
   const { data, error, loading, reload } = useFetch<QueueItem[]>('/expenses/queue/pending');
-  const [selected, setSelected] = useState<Set<number>>(new Set());
+  const [selected, setSelected] = useState<Set<string>>(new Set());
   const [comment, setComment] = useState('');
-  const [rejectingId, setRejectingId] = useState<number | null>(null);
+  const [rejectingId, setRejectingId] = useState<string | null>(null);
   const [rejectReason, setRejectReason] = useState('');
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<{ kind: 'ok' | 'error'; text: string } | null>(null);
@@ -44,7 +44,7 @@ export default function ApprovalsPage() {
   const allSelected = items.length > 0 && items.every((i) => selected.has(i.id));
   const canBatch = can('expense.batch_approve');
 
-  const toggle = (id: number) =>
+  const toggle = (id: string) =>
     setSelected((prev) => {
       const next = new Set(prev);
       next.has(id) ? next.delete(id) : next.add(id);
@@ -53,7 +53,7 @@ export default function ApprovalsPage() {
 
   const toggleAll = () => setSelected(allSelected ? new Set() : new Set(items.map((i) => i.id)));
 
-  async function approveOne(id: number) {
+  async function approveOne(id: string) {
     await run(() => api(`/expenses/${id}/approve`, { method: 'POST', json: { comment: comment || undefined } }), 'Approved');
   }
 

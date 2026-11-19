@@ -1,13 +1,13 @@
 import {
-  ArrayMaxSize, ArrayNotEmpty, IsArray, IsInt, IsOptional, IsString, Length,
+  ArrayMaxSize, ArrayNotEmpty, IsArray, IsUUID, IsOptional, IsString, Length,
 } from 'class-validator';
 
 export class BatchApproveDto {
   @IsArray()
   @ArrayNotEmpty()
   @ArrayMaxSize(200)
-  @IsInt({ each: true })
-  ids!: number[];
+  @IsUUID('all', { each: true })
+  ids!: string[];
 
   @IsOptional() @IsString() @Length(0, 500) comment?: string;
 }

@@ -2,37 +2,37 @@ export type ExpenseStatus =
   | 'DRAFT' | 'SUBMITTED' | 'APPROVED' | 'REJECTED' | 'PARTIALLY_PAID' | 'PAID';
 
 export interface Me {
-  id: number;
+  id: string;
   name: string;
   role: string;
   permissions: string[];
 }
 
 export interface ApprovalStep {
-  id?: number;
+  id?: string;
   stepOrder: number;
   label: string;
   requiredPermission: string;
   status?: 'PENDING' | 'APPROVED' | 'REJECTED';
-  actedById?: number | null;
+  actedById?: string | null;
   actedAt?: string | null;
   comment?: string | null;
 }
 
 export interface HistoryEntry {
-  id: number;
+  id: string;
   fromStatus: string | null;
   toStatus: string;
-  actorId: number;
+  actorId: string;
   comment: string | null;
   createdAt: string;
 }
 
 export interface Expense {
-  id: number;
-  employeeId: number;
-  trackerId: number | null;
-  scheduleId: number | null;
+  id: string;
+  employeeId: string;
+  trackerId: string | null;
+  scheduleId: string | null;
   occurrenceDate: string | null;
   category: string;
   amount: number | string;
@@ -43,14 +43,14 @@ export interface Expense {
   paidAmount: number | string;
   submittedAt: string | null;
   rejectionReason: string | null;
-  employee?: { id: number; name: string };
+  employee?: { id: string; name: string };
   approvals?: ApprovalStep[];
   history?: HistoryEntry[];
 }
 
 export interface Attachment {
-  id: number;
-  expenseId: number;
+  id: string;
+  expenseId: string;
   originalName: string;
   mimeType: string;
   sizeBytes: number;
@@ -58,28 +58,28 @@ export interface Attachment {
 }
 
 export interface Payment {
-  id: number;
-  expenseId: number;
+  id: string;
+  expenseId: string;
   amount: number | string;
   paidOn: string;
   reference: string | null;
-  recordedById: number;
+  recordedById: string;
 }
 
 export interface Tracker {
-  id: number;
-  employeeId: number;
+  id: string;
+  employeeId: string;
   title: string;
   description: string | null;
   startDate: string;
   endDate: string | null;
   budgetAmount: number | string | null;
   status: 'ACTIVE' | 'CLOSED';
-  employee?: { id: number; name: string };
+  employee?: { id: string; name: string };
 }
 
 export interface TrackerSchedule {
-  id: number;
+  id: string;
   frequency: 'DAILY' | 'WEEKLY' | 'MONTHLY';
   interval: number;
   amount: number | string;
@@ -104,14 +104,14 @@ export interface TrackerSummary {
 }
 
 export interface PolicyStep {
-  id: number;
+  id: string;
   stepOrder: number;
   label: string;
   requiredPermission: string;
 }
 
 export interface ApprovalPolicy {
-  id: number;
+  id: string;
   name: string;
   category: string | null;
   minAmount: number | string;
@@ -121,9 +121,9 @@ export interface ApprovalPolicy {
 }
 
 export interface AppUser {
-  id: number;
+  id: string;
   name: string;
   email: string;
   isActive: boolean;
-  role?: { id: number; name: string };
+  role?: { id: string; name: string };
 }

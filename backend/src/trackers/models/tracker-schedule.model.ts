@@ -6,13 +6,13 @@ import { Frequency } from '../recurrence';
 
 @Table({ tableName: 'tracker_schedules' })
 export class TrackerSchedule extends Model {
-  @Column({ type: DataType.INTEGER.UNSIGNED, autoIncrement: true, primaryKey: true })
-  id!: number;
+  @Column({ type: DataType.UUID, defaultValue: DataType.UUIDV4, primaryKey: true })
+  id!: string;
 
   @ForeignKey(() => Tracker)
   @AllowNull(false)
-  @Column(DataType.INTEGER.UNSIGNED)
-  trackerId!: number;
+  @Column(DataType.UUID)
+  trackerId!: string;
 
   @BelongsTo(() => Tracker)
   tracker!: Tracker;

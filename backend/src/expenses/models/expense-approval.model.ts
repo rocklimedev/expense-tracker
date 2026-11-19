@@ -12,14 +12,14 @@ export enum ApprovalStatus {
 /** One step in the approval chain for one expense. Created at submit time. */
 @Table({ tableName: 'expense_approvals' })
 export class ExpenseApproval extends Model {
-  @Column({ type: DataType.INTEGER.UNSIGNED, autoIncrement: true, primaryKey: true })
-  id!: number;
+  @Column({ type: DataType.UUID, defaultValue: DataType.UUIDV4, primaryKey: true })
+  id!: string;
 
   @ForeignKey(() => Expense)
   @Unique({ name: 'uq_expense_step', msg: 'Step already exists for this expense' })
   @AllowNull(false)
-  @Column(DataType.INTEGER.UNSIGNED)
-  expenseId!: number;
+  @Column(DataType.UUID)
+  expenseId!: string;
 
   @BelongsTo(() => Expense)
   expense!: Expense;
@@ -41,8 +41,8 @@ export class ExpenseApproval extends Model {
   @Column(DataType.ENUM(...Object.values(ApprovalStatus)))
   status!: ApprovalStatus;
 
-  @Column(DataType.INTEGER.UNSIGNED)
-  actedById!: number | null;
+  @Column(DataType.UUID)
+  actedById!: string | null;
 
   @Column(DataType.DATE)
   actedAt!: Date | null;

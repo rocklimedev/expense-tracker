@@ -27,7 +27,11 @@ export class UsersService {
     });
   }
 
-  private sanitize(id: number) {
+  findRoles() {
+    return Role.findAll({ attributes: ['id', 'name'], order: [['name', 'ASC']] });
+  }
+
+  private sanitize(id: string) {
     return User.findByPk(id, {
       attributes: { exclude: ['passwordHash'] },
       include: [Role],

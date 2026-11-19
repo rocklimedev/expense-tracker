@@ -1,6 +1,7 @@
 import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { PassportStrategy } from '@nestjs/passport';
+import { isUUID } from 'class-validator';
 import { ExtractJwt, Strategy } from 'passport-jwt';
 import { Role } from '../users/models/role.model';
 import { User } from '../users/models/user.model';
@@ -17,7 +18,9 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
   }
 
   // Permissions are read from the DB on every request, so role changes apply immediately
-  async validate(payload: { sub: number }): Promise<AuthUser> {
+  async validate(payload: { sub?: unknown }): Promise<AuthUser> {
+    if (typeof payload.sub !== 'string' || !isUUID(payload.sub)) throw new UnauthorizedException();
+
     const user = await User.findByPk(payload.sub, { include: [Role] });
     if (!user || !user.isActive) throw new UnauthorizedException();
 

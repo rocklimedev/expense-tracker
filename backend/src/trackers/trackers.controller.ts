@@ -1,5 +1,5 @@
 import {
-  Body, Controller, Get, Param, ParseIntPipe, Post, Query, Req, UseGuards,
+  Body, Controller, Get, Param, ParseUUIDPipe, Post, Query, Req, UseGuards,
 } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { PermissionsGuard } from '../common/guards/permissions.guard';
@@ -29,24 +29,24 @@ export class TrackersController {
   }
 
   @Get(':id')
-  findOne(@Req() req, @Param('id', ParseIntPipe) id: number) {
+  findOne(@Req() req, @Param('id', ParseUUIDPipe) id: string) {
     return this.trackers.findVisible(req.user, id);
   }
 
   @Post(':id/close')
-  close(@Req() req, @Param('id', ParseIntPipe) id: number) {
+  close(@Req() req, @Param('id', ParseUUIDPipe) id: string) {
     return this.trackers.close(req.user, id);
   }
 
   @Get(':id/summary')
-  summary(@Req() req, @Param('id', ParseIntPipe) id: number) {
+  summary(@Req() req, @Param('id', ParseUUIDPipe) id: string) {
     return this.trackers.summary(req.user, id);
   }
 
   @Get(':id/expenses')
   expenses(
     @Req() req,
-    @Param('id', ParseIntPipe) id: number,
+    @Param('id', ParseUUIDPipe) id: string,
     @Query('from') from?: string,
     @Query('to') to?: string,
     @Query('status') status?: ExpenseStatus,
@@ -58,14 +58,14 @@ export class TrackersController {
   @RequirePermissions(Permissions.EXPENSE_CREATE)
   addExpense(
     @Req() req,
-    @Param('id', ParseIntPipe) id: number,
+    @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: CreateExpenseDto,
   ) {
     return this.trackers.addExpense(req.user, id, dto);
   }
 
   @Get(':id/schedules')
-  schedules(@Req() req, @Param('id', ParseIntPipe) id: number) {
+  schedules(@Req() req, @Param('id', ParseUUIDPipe) id: string) {
     return this.trackers.listSchedules(req.user, id);
   }
 
@@ -73,7 +73,7 @@ export class TrackersController {
   @RequirePermissions(Permissions.EXPENSE_CREATE)
   createSchedule(
     @Req() req,
-    @Param('id', ParseIntPipe) id: number,
+    @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: CreateScheduleDto,
   ) {
     return this.trackers.createSchedule(req.user, id, dto);
@@ -82,14 +82,14 @@ export class TrackersController {
   @Post(':id/schedules/:scheduleId/stop')
   stopSchedule(
     @Req() req,
-    @Param('id', ParseIntPipe) id: number,
-    @Param('scheduleId', ParseIntPipe) scheduleId: number,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Param('scheduleId', ParseUUIDPipe) scheduleId: string,
   ) {
     return this.trackers.stopSchedule(req.user, id, scheduleId);
   }
 
   @Post(':id/generate')
-  generate(@Req() req, @Param('id', ParseIntPipe) id: number) {
+  generate(@Req() req, @Param('id', ParseUUIDPipe) id: string) {
     return this.trackers.generate(req.user, id);
   }
 
@@ -97,7 +97,7 @@ export class TrackersController {
   @RequirePermissions(Permissions.EXPENSE_CREATE)
   submitDrafts(
     @Req() req,
-    @Param('id', ParseIntPipe) id: number,
+    @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: SubmitDraftsDto,
   ) {
     return this.trackers.submitDrafts(req.user, id, dto);

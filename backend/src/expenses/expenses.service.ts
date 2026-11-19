@@ -49,7 +49,7 @@ export class ExpensesService {
     return expense;
   }
 
-  private async findLocked(id: number, t: Transaction) {
+  private async findLocked(id: string, t: Transaction) {
     const expense = await Expense.findByPk(id, { lock: t.LOCK.UPDATE, transaction: t });
     if (!expense) throw new NotFoundException('Expense not found');
     return expense;
@@ -59,7 +59,7 @@ export class ExpensesService {
    * Locks the expense, finds the step waiting for action, and checks that the actor
    * may act on it. Shared by approve() and reject().
    */
-  private async loadCurrentStep(actor: AuthUser, id: number, t: Transaction) {
+  private async loadCurrentStep(actor: AuthUser, id: string, t: Transaction) {
     const expense = await this.findLocked(id, t);
 
     if (expense.status !== ExpenseStatus.SUBMITTED) {
@@ -102,7 +102,7 @@ export class ExpensesService {
    * Resolves the approval chain and snapshots it into expense_approvals.
    * Later policy changes do not affect this expense. Resubmitting replaces the chain.
    */
-  async submit(actor: AuthUser, id: number) {
+  async submit(actor: AuthUser, id: string) {
     return this.sequelize.transaction(async (t) => {
       const expense = await this.findLocked(id, t);
       if (expense.employeeId !== actor.id) throw new ForbiddenException();
@@ -131,10 +131,10 @@ export class ExpensesService {
   }
 
   /** Same rules as submit(), applied per item. One failure does not stop the others. */
-  async submitMany(actor: AuthUser, ids: number[]) {
+  async submitMany(actor: AuthUser, ids: string[]) {
     const result = {
-      submitted: [] as number[],
-      failed: [] as { id: number; error: string }[],
+      submitted: [] as string[],
+      failed: [] as { id: string; error: string }[],
     };
     for (const id of ids) {
       try {
@@ -148,7 +148,7 @@ export class ExpensesService {
   }
 
   // ---------- Queries (scoped by permission) ----------
-  async list(actor: AuthUser, filters: { status?: ExpenseStatus; employeeId?: number }) {
+  async list(actor: AuthUser, filters: { status?: ExpenseStatus; employeeId?: string }) {
     const where: Record<string, unknown> = {};
     if (filters.status) where.status = filters.status;
 
@@ -167,7 +167,7 @@ export class ExpensesService {
     });
   }
 
-  async findOne(actor: AuthUser, id: number) {
+  async findOne(actor: AuthUser, id: string) {
     const expense = await Expense.findByPk(id, {
       include: [
         { model: User, attributes: ['id', 'name'] },
@@ -228,7 +228,7 @@ export class ExpensesService {
    * Approves the current step. If it was the last pending step, the expense becomes
    * APPROVED. Otherwise it stays SUBMITTED and waits for the next step.
    */
-  async approve(actor: AuthUser, id: number, comment?: string) {
+  async approve(actor: AuthUser, id: string, comment?: string) {
     return this.sequelize.transaction(async (t) => {
       const { expense, steps, current } = await this.loadCurrentStep(actor, id, t);
 
@@ -274,7 +274,7 @@ export class ExpensesService {
   }
 
   /** Rejecting at any step ends the chain. The employee can resubmit. */
-  async reject(actor: AuthUser, id: number, reason: string) {
+  async reject(actor: AuthUser, id: string, reason: string) {
     return this.sequelize.transaction(async (t) => {
       const { expense, current } = await this.loadCurrentStep(actor, id, t);
 
@@ -294,8 +294,8 @@ export class ExpensesService {
   /** Approves each expense on its own. Partial success is returned per item. */
   async batchApprove(actor: AuthUser, dto: BatchApproveDto) {
     const result = {
-      approved: [] as number[],
-      failed: [] as { id: number; error: string }[],
+      approved: [] as string[],
+      failed: [] as { id: string; error: string }[],
     };
     for (const id of dto.ids) {
       try {

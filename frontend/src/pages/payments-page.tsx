@@ -28,7 +28,7 @@ export default function PaymentsPage() {
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<{ kind: 'ok' | 'error'; text: string } | null>(null);
 
-  const selected = open.find((e) => String(e.id) === expenseId);
+  const selected = open.find((e) => e.id === expenseId);
   const remaining = selected ? Number(selected.amount) - Number(selected.paidAmount) : 0;
 
   const reloadAll = () => { approved.reload(); partial.reload(); };

@@ -113,7 +113,7 @@ DRAFT ──submit──▶ SUBMITTED ──(all approval steps approved)──�
 
 ## 5. Approval design
 
-- **Policies** decide the chain. A policy has an optional category, a minimum amount, a priority, and ordered steps. The matching active policy with the highest priority wins. Ties go to the higher minimum amount, then the lower id.
+- **Policies** decide the chain. A policy has an optional category, a minimum amount, a priority, and ordered steps. The matching active policy with the highest priority wins. Ties go to the higher minimum amount, then the earliest creation time, with the UUID as a stable final tie-breaker.
 - **Fallback.** If no policy matches, a single `expense.approve` step applies.
 - **Snapshot at submit.** Steps are copied into `expense_approvals` when the expense is submitted. Changing or deactivating a policy does not affect claims already in progress.
 - **Strict order.** Only the first pending step can be acted on.
@@ -182,6 +182,7 @@ All routes except `POST /auth/login` require `Authorization: Bearer <token>`.
 |---|---|---|---|
 | POST | `/users` | `user.manage` | Create a user |
 | GET | `/users` | `user.manage` | List users |
+| GET | `/users/roles` | `user.manage` | List roles and their UUIDs |
 
 ### Expenses
 | Method | Path | Permission | Description |
@@ -397,7 +398,7 @@ These came up across the earlier steps. Apply them when you combine the files:
 2. **Unused import.** Remove `Patch` from the imports in `expenses.controller.ts`.
 3. **Expense model.** Add the `Tracker`, `TrackerSchedule`, `Attachment`, and `ExpenseApproval` relations and the `trackerId`, `scheduleId`, and `occurrenceDate` columns, as shown in the tracker and approval sections.
 4. **Expense `paidAmount`.** Keep the default of `0` so payments can start from zero.
-5. **Roles.** Run the seed after changing permissions. Role IDs depend on seed order; check `GET /users` before creating employees with a hard-coded `roleId`.
+5. **Roles.** Run the seed after changing permissions. Use `GET /users/roles` to look up the UUID to send as `roleId` when creating a user.
 6. **Schema.** Development uses `synchronize: true`, which creates tables from the models. Do not use it in production.
 
 ---

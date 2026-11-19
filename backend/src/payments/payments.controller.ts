@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, ParseIntPipe, Post, Req, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Param, ParseUUIDPipe, Post, Req, UseGuards } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { PermissionsGuard } from '../common/guards/permissions.guard';
 import { RequirePermissions } from '../common/decorators/require-permissions.decorator';
@@ -15,7 +15,7 @@ export class PaymentsController {
   @RequirePermissions(Permissions.PAYMENT_RECORD)
   record(
     @Req() req,
-    @Param('expenseId', ParseIntPipe) expenseId: number,
+    @Param('expenseId', ParseUUIDPipe) expenseId: string,
     @Body() dto: RecordPaymentDto,
   ) {
     return this.payments.record(req.user, expenseId, dto);
@@ -23,7 +23,7 @@ export class PaymentsController {
 
   @Get()
   @RequirePermissions(Permissions.PAYMENT_RECORD)
-  list(@Param('expenseId', ParseIntPipe) expenseId: number) {
+  list(@Param('expenseId', ParseUUIDPipe) expenseId: string) {
     return this.payments.listForExpense(expenseId);
   }
 }

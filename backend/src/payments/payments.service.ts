@@ -14,7 +14,7 @@ const round2 = (n: number) => Math.round(n * 100) / 100;
 export class PaymentsService {
   constructor(@InjectConnection() private sequelize: Sequelize) {}
 
-  async record(actor: AuthUser, expenseId: number, dto: RecordPaymentDto) {
+  async record(actor: AuthUser, expenseId: string, dto: RecordPaymentDto) {
     return this.sequelize.transaction(async (t) => {
       // Row lock so two finance users cannot overpay the same claim
       const expense = await Expense.findByPk(expenseId, { lock: t.LOCK.UPDATE, transaction: t });
@@ -64,7 +64,7 @@ export class PaymentsService {
     });
   }
 
-  listForExpense(expenseId: number) {
+  listForExpense(expenseId: string) {
     return Payment.findAll({ where: { expenseId }, order: [['paidOn', 'ASC']] });
   }
 }

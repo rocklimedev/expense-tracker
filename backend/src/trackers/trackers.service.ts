@@ -58,7 +58,7 @@ export class TrackersService {
     });
   }
 
-  async findVisible(actor: AuthUser, id: number) {
+  async findVisible(actor: AuthUser, id: string) {
     const tracker = await Tracker.findByPk(id, {
       include: [{ model: User, attributes: ['id', 'name'] }],
     });
@@ -71,7 +71,7 @@ export class TrackersService {
     return tracker;
   }
 
-  async close(actor: AuthUser, id: number) {
+  async close(actor: AuthUser, id: string) {
     const tracker = await this.findVisible(actor, id);
     this.assertOwner(actor, tracker);
 
@@ -88,7 +88,7 @@ export class TrackersService {
 
   // ---------- Expenses inside a tracker ----------
 
-  async addExpense(actor: AuthUser, id: number, dto: CreateExpenseDto) {
+  async addExpense(actor: AuthUser, id: string, dto: CreateExpenseDto) {
     const tracker = await this.findVisible(actor, id);
     this.assertOwner(actor, tracker);
     this.assertOpen(tracker);
@@ -99,7 +99,7 @@ export class TrackersService {
 
   async listExpenses(
     actor: AuthUser,
-    id: number,
+    id: string,
     filters: { from?: string; to?: string; status?: ExpenseStatus },
   ) {
     const tracker = await this.findVisible(actor, id);
@@ -119,7 +119,7 @@ export class TrackersService {
    * Totals and breakdowns for a tracker. Rejected expenses are excluded from money
    * totals, since they will never be paid.
    */
-  async summary(actor: AuthUser, id: number) {
+  async summary(actor: AuthUser, id: string) {
     const tracker = await this.findVisible(actor, id);
 
     const byStatus = (await Expense.findAll({
@@ -177,7 +177,7 @@ export class TrackersService {
 
   // ---------- Recurring schedules ----------
 
-  async createSchedule(actor: AuthUser, id: number, dto: CreateScheduleDto) {
+  async createSchedule(actor: AuthUser, id: string, dto: CreateScheduleDto) {
     const tracker = await this.findVisible(actor, id);
     this.assertOwner(actor, tracker);
     this.assertOpen(tracker);
@@ -196,12 +196,12 @@ export class TrackersService {
     };
   }
 
-  async listSchedules(actor: AuthUser, id: number) {
+  async listSchedules(actor: AuthUser, id: string) {
     const tracker = await this.findVisible(actor, id);
-    return TrackerSchedule.findAll({ where: { trackerId: tracker.id }, order: [['id', 'ASC']] });
+    return TrackerSchedule.findAll({ where: { trackerId: tracker.id }, order: [['createdAt', 'ASC'], ['id', 'ASC']] });
   }
 
-  async stopSchedule(actor: AuthUser, trackerId: number, scheduleId: number) {
+  async stopSchedule(actor: AuthUser, trackerId: string, scheduleId: string) {
     const tracker = await this.findVisible(actor, trackerId);
     this.assertOwner(actor, tracker);
 
@@ -213,7 +213,7 @@ export class TrackersService {
   }
 
   /** Owner triggers generation manually, for example "generate what is due now". */
-  async generate(actor: AuthUser, id: number) {
+  async generate(actor: AuthUser, id: string) {
     const tracker = await this.findVisible(actor, id);
     this.assertOwner(actor, tracker);
     return this.generateForTracker(tracker);
@@ -234,7 +234,7 @@ export class TrackersService {
       where: { trackerId: tracker.id, active: true },
     });
 
-    const results: { scheduleId: number; occurrences: string[] }[] = [];
+    const results: { scheduleId: string; occurrences: string[] }[] = [];
 
     for (const schedule of schedules) {
       const from = schedule.generatedThrough
@@ -298,7 +298,7 @@ export class TrackersService {
    * range or schedule. Use dryRun to preview first. Processes up to 200 per call;
    * if hasMore is true, call again.
    */
-  async submitDrafts(actor: AuthUser, trackerId: number, dto: SubmitDraftsDto) {
+  async submitDrafts(actor: AuthUser, trackerId: string, dto: SubmitDraftsDto) {
     const tracker = await this.findVisible(actor, trackerId);
     this.assertOwner(actor, tracker);
 
@@ -322,7 +322,7 @@ export class TrackersService {
     const rows = await Expense.findAll({
       where,
       attributes: ['id', 'expenseDate', 'amount', 'category', 'scheduleId'],
-      order: [['expenseDate', 'ASC'], ['id', 'ASC']],
+      order: [['expenseDate', 'ASC'], ['createdAt', 'ASC'], ['id', 'ASC']],
       limit: MAX_BULK_SUBMIT + 1,
     });
     const hasMore = rows.length > MAX_BULK_SUBMIT;

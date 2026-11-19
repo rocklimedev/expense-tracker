@@ -56,7 +56,7 @@ export default function PoliciesPage() {
     }
   }
 
-  async function deactivate(id: number) {
+  async function deactivate(id: string) {
     setMessage(null);
     try {
       await api(`/approval-policies/${id}/deactivate`, { method: 'POST' });

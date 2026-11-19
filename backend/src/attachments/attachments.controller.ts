@@ -1,5 +1,5 @@
 import {
-  BadRequestException, Controller, Delete, Get, Param, ParseIntPipe, Post, Req,
+  BadRequestException, Controller, Delete, Get, Param, ParseUUIDPipe, Post, Req,
   StreamableFile, UploadedFile, UseGuards, UseInterceptors,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
@@ -26,7 +26,7 @@ export class AttachmentsController {
   )
   upload(
     @Req() req,
-    @Param('expenseId', ParseIntPipe) expenseId: number,
+    @Param('expenseId', ParseUUIDPipe) expenseId: string,
     @UploadedFile() file: Express.Multer.File,
   ) {
     if (!file) throw new BadRequestException('Send the file in a form field named "file"');
@@ -34,12 +34,12 @@ export class AttachmentsController {
   }
 
   @Get('expenses/:expenseId/attachments')
-  list(@Req() req, @Param('expenseId', ParseIntPipe) expenseId: number) {
+  list(@Req() req, @Param('expenseId', ParseUUIDPipe) expenseId: string) {
     return this.attachments.list(req.user, expenseId);
   }
 
   @Get('attachments/:id/download')
-  async download(@Req() req, @Param('id', ParseIntPipe) id: number) {
+  async download(@Req() req, @Param('id', ParseUUIDPipe) id: string) {
     const file = await this.attachments.download(req.user, id);
     return new StreamableFile(file.buffer, {
       type: file.mimeType,
@@ -50,7 +50,7 @@ export class AttachmentsController {
 
   @Delete('attachments/:id')
   @RequirePermissions(Permissions.EXPENSE_CREATE)
-  remove(@Req() req, @Param('id', ParseIntPipe) id: number) {
+  remove(@Req() req, @Param('id', ParseUUIDPipe) id: string) {
     return this.attachments.remove(req.user, id);
   }
 }

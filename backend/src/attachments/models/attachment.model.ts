@@ -5,13 +5,13 @@ import { Expense } from '../../expenses/models/expense.model';
 
 @Table({ tableName: 'attachments' })
 export class Attachment extends Model {
-  @Column({ type: DataType.INTEGER.UNSIGNED, autoIncrement: true, primaryKey: true })
-  id!: number;
+  @Column({ type: DataType.UUID, defaultValue: DataType.UUIDV4, primaryKey: true })
+  id!: string;
 
   @ForeignKey(() => Expense)
   @AllowNull(false)
-  @Column(DataType.INTEGER.UNSIGNED)
-  expenseId!: number;
+  @Column(DataType.UUID)
+  expenseId!: string;
 
   @BelongsTo(() => Expense)
   expense!: Expense;
@@ -35,6 +35,6 @@ export class Attachment extends Model {
   sizeBytes!: number;
 
   @AllowNull(false)
-  @Column(DataType.INTEGER.UNSIGNED)
-  uploadedById!: number;
+  @Column(DataType.UUID)
+  uploadedById!: string;
 }

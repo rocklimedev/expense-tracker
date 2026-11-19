@@ -21,7 +21,7 @@ export class AttachmentsService {
 
   constructor(@Inject(STORAGE_PROVIDER) private readonly storage: StorageProvider) {}
 
-  async upload(actor: AuthUser, expenseId: number, file: Express.Multer.File) {
+  async upload(actor: AuthUser, expenseId: string, file: Express.Multer.File) {
     const expense = await this.loadExpense(expenseId);
     this.assertOwner(actor, expense, 'Only the expense owner can add receipts');
     this.assertEditable(expense);
@@ -53,7 +53,7 @@ export class AttachmentsService {
     }
   }
 
-  async list(actor: AuthUser, expenseId: number) {
+  async list(actor: AuthUser, expenseId: string) {
     const expense = await this.loadExpense(expenseId);
     this.assertCanView(actor, expense);
     return Attachment.findAll({
@@ -63,7 +63,7 @@ export class AttachmentsService {
     });
   }
 
-  async download(actor: AuthUser, id: number) {
+  async download(actor: AuthUser, id: string) {
     const attachment = await this.loadAttachment(id);
     const expense = await this.loadExpense(attachment.expenseId);
     this.assertCanView(actor, expense);
@@ -76,7 +76,7 @@ export class AttachmentsService {
     };
   }
 
-  async remove(actor: AuthUser, id: number) {
+  async remove(actor: AuthUser, id: string) {
     const attachment = await this.loadAttachment(id);
     const expense = await this.loadExpense(attachment.expenseId);
     this.assertOwner(actor, expense, 'Only the expense owner can remove receipts');
@@ -99,13 +99,13 @@ export class AttachmentsService {
     return `receipts/${yyyy}/${mm}/${randomUUID()}.${ext}`;
   }
 
-  private async loadExpense(id: number) {
+  private async loadExpense(id: string) {
     const expense = await Expense.findByPk(id);
     if (!expense) throw new NotFoundException('Expense not found');
     return expense;
   }
 
-  private async loadAttachment(id: number) {
+  private async loadAttachment(id: string) {
     const attachment = await Attachment.findByPk(id);
     if (!attachment) throw new NotFoundException('Attachment not found');
     return attachment;

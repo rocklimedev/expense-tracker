@@ -1,5 +1,5 @@
 import {
-  Body, Controller, Get, Param, ParseIntPipe, Post, Query, Req, UseGuards,
+  Body, Controller, Get, Param, ParseUUIDPipe, Post, Query, Req, UseGuards,
 } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { PermissionsGuard } from '../common/guards/permissions.guard';
@@ -27,7 +27,7 @@ export class ExpensesController {
   list(
     @Req() req,
     @Query('status') status?: ExpenseStatus,
-    @Query('employeeId') employeeId?: number,
+    @Query('employeeId', new ParseUUIDPipe({ optional: true })) employeeId?: string,
   ) {
     return this.expenses.list(req.user, { status, employeeId });
   }
@@ -45,12 +45,12 @@ export class ExpensesController {
   }
 
   @Get(':id')
-  findOne(@Req() req, @Param('id', ParseIntPipe) id: number) {
+  findOne(@Req() req, @Param('id', ParseUUIDPipe) id: string) {
     return this.expenses.findOne(req.user, id);
   }
 
   @Post(':id/submit')
-  submit(@Req() req, @Param('id', ParseIntPipe) id: number) {
+  submit(@Req() req, @Param('id', ParseUUIDPipe) id: string) {
     return this.expenses.submit(req.user, id);
   }
 
@@ -58,7 +58,7 @@ export class ExpensesController {
   @RequirePermissions(Permissions.EXPENSE_APPROVE)
   approve(
     @Req() req,
-    @Param('id', ParseIntPipe) id: number,
+    @Param('id', ParseUUIDPipe) id: string,
     @Body('comment') comment?: string,
   ) {
     return this.expenses.approve(req.user, id, comment);
@@ -68,7 +68,7 @@ export class ExpensesController {
   @RequirePermissions(Permissions.EXPENSE_REJECT)
   reject(
     @Req() req,
-    @Param('id', ParseIntPipe) id: number,
+    @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: RejectExpenseDto,
   ) {
     return this.expenses.reject(req.user, id, dto.reason);

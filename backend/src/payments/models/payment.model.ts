@@ -4,13 +4,13 @@ import { User } from '../../users/models/user.model';
 
 @Table({ tableName: 'payments' })
 export class Payment extends Model {
-  @Column({ type: DataType.INTEGER.UNSIGNED, autoIncrement: true, primaryKey: true })
-  id!: number;
+  @Column({ type: DataType.UUID, defaultValue: DataType.UUIDV4, primaryKey: true })
+  id!: string;
 
   @ForeignKey(() => Expense)
   @AllowNull(false)
-  @Column(DataType.INTEGER.UNSIGNED)
-  expenseId!: number;
+  @Column(DataType.UUID)
+  expenseId!: string;
 
   @BelongsTo(() => Expense)
   expense!: Expense;
@@ -27,8 +27,8 @@ export class Payment extends Model {
   reference!: string;
 
   @AllowNull(false)
-  @Column(DataType.INTEGER.UNSIGNED)
-  recordedById!: number;
+  @Column(DataType.UUID)
+  recordedById!: string;
 
   @BelongsTo(() => User, 'recordedById')
   recordedBy!: User;
