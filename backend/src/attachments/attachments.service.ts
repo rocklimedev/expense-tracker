@@ -1,5 +1,10 @@
 import {
-  BadRequestException, ForbiddenException, Inject, Injectable, Logger, NotFoundException,
+  BadRequestException,
+  ForbiddenException,
+  Inject,
+  Injectable,
+  Logger,
+  NotFoundException,
 } from '@nestjs/common';
 import { randomUUID } from 'crypto';
 import { Permissions } from '../common/permissions';
@@ -8,9 +13,7 @@ import { Expense } from '../expenses/models/expense.model';
 import { ExpenseStatus } from '../expenses/expense-workflow';
 import { STORAGE_PROVIDER, StorageProvider } from '../storage/storage.interface';
 import { Attachment } from './models/attachment.model';
-import {
-  MAX_ATTACHMENTS_PER_EXPENSE, detectFileType, sanitizeFileName,
-} from './file-validation';
+import { MAX_ATTACHMENTS_PER_EXPENSE, detectFileType, sanitizeFileName } from './file-validation';
 
 // Receipts can only change while the expense is being prepared or was sent back
 const EDITABLE_STATUSES = [ExpenseStatus.DRAFT, ExpenseStatus.REJECTED];
@@ -84,9 +87,11 @@ export class AttachmentsService {
 
     await attachment.destroy();
     // Remove the file after the DB row is gone. A leftover file is harmless; a dangling row is not.
-    await this.storage.delete(attachment.storageKey).catch((err) =>
-      this.logger.warn(`Could not delete ${attachment.storageKey}: ${err.message}`),
-    );
+    await this.storage
+      .delete(attachment.storageKey)
+      .catch((err) =>
+        this.logger.warn(`Could not delete ${attachment.storageKey}: ${err.message}`),
+      );
     return { deleted: true };
   }
 
@@ -117,7 +122,9 @@ export class AttachmentsService {
 
   private assertCanView(actor: AuthUser, expense: Expense) {
     const canViewAll = actor.permissions.includes(Permissions.EXPENSE_VIEW_ALL);
-    if (!canViewAll && expense.employeeId !== actor.id) {
+    const canViewOwn =
+      actor.permissions.includes(Permissions.EXPENSE_VIEW_OWN) && expense.employeeId === actor.id;
+    if (!canViewAll && !canViewOwn) {
       throw new ForbiddenException('You do not have access to this expense');
     }
   }

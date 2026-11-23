@@ -1,7 +1,7 @@
 import {
   AllowNull, BelongsTo, Column, DataType, Default, ForeignKey, Model, Table, Unique,
 } from 'sequelize-typescript';
-import { Role } from './role.model';
+import { Role } from '../../rbac/models/role.model';
 
 @Table({ tableName: 'users' })
 export class User extends Model {

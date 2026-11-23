@@ -41,7 +41,7 @@ export class Expense extends Model {
   occurrenceDate!: string | null;
 
   @AllowNull(false)
-  @Column(DataType.STRING(60))
+  @Column({ type: DataType.STRING(60), references: { model: 'expense_categories', key: 'code' } })
   category!: string;
 
   // DECIMAL comes back from MySQL as a string; services convert with Number()

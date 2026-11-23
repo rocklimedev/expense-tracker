@@ -1,5 +1,12 @@
 import {
-  AllowNull, BelongsTo, Column, DataType, Default, ForeignKey, Model, Table,
+  AllowNull,
+  BelongsTo,
+  Column,
+  DataType,
+  Default,
+  ForeignKey,
+  Model,
+  Table,
 } from 'sequelize-typescript';
 import { Tracker } from './tracker.model';
 import { Frequency } from '../recurrence';
@@ -31,7 +38,7 @@ export class TrackerSchedule extends Model {
   amount!: number;
 
   @AllowNull(false)
-  @Column(DataType.STRING(60))
+  @Column({ type: DataType.STRING(60), references: { model: 'expense_categories', key: 'code' } })
   category!: string;
 
   @Column(DataType.STRING(500))

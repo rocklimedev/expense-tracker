@@ -1,5 +1,9 @@
 import {
-  BadRequestException, ForbiddenException, Injectable, Logger, NotFoundException,
+  BadRequestException,
+  ForbiddenException,
+  Injectable,
+  Logger,
+  NotFoundException,
 } from '@nestjs/common';
 import { InjectConnection } from '@nestjs/sequelize';
 import { Sequelize } from 'sequelize-typescript';
@@ -10,6 +14,7 @@ import { User } from '../users/models/user.model';
 import { Expense } from '../expenses/models/expense.model';
 import { ExpenseStatus } from '../expenses/expense-workflow';
 import { ExpensesService } from '../expenses/expenses.service';
+import { ExpenseCategoriesService } from '../expense-categories/expense-categories.service';
 import { CreateExpenseDto } from '../expenses/dto/create-expense.dto';
 import { Tracker, TrackerStatus } from './models/tracker.model';
 import { TrackerSchedule } from './models/tracker-schedule.model';
@@ -24,7 +29,9 @@ const MAX_BULK_SUBMIT = 200; // matches the batch approval limit
 function todayIso(): string {
   return new Intl.DateTimeFormat('en-CA', {
     timeZone: process.env.APP_TIMEZONE ?? 'UTC',
-    year: 'numeric', month: '2-digit', day: '2-digit',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
   }).format(new Date());
 }
 
@@ -38,6 +45,7 @@ export class TrackersService {
   constructor(
     @InjectConnection() private sequelize: Sequelize,
     private readonly expenses: ExpensesService,
+    private readonly categories: ExpenseCategoriesService,
   ) {}
 
   // ---------- Trackers ----------
@@ -51,6 +59,9 @@ export class TrackersService {
 
   async list(actor: AuthUser) {
     const canViewAll = actor.permissions.includes(Permissions.EXPENSE_VIEW_ALL);
+    if (!canViewAll && !actor.permissions.includes(Permissions.EXPENSE_VIEW_OWN)) {
+      throw new ForbiddenException('You do not have access to trackers');
+    }
     return Tracker.findAll({
       where: canViewAll ? {} : { employeeId: actor.id },
       order: [['createdAt', 'DESC']],
@@ -65,7 +76,9 @@ export class TrackersService {
     if (!tracker) throw new NotFoundException('Tracker not found');
 
     const canViewAll = actor.permissions.includes(Permissions.EXPENSE_VIEW_ALL);
-    if (!canViewAll && tracker.employeeId !== actor.id) {
+    const canViewOwn =
+      actor.permissions.includes(Permissions.EXPENSE_VIEW_OWN) && tracker.employeeId === actor.id;
+    if (!canViewAll && !canViewOwn) {
       throw new ForbiddenException('You do not have access to this tracker');
     }
     return tracker;
@@ -76,7 +89,10 @@ export class TrackersService {
     this.assertOwner(actor, tracker);
 
     return this.sequelize.transaction(async (t) => {
-      await tracker.update({ status: TrackerStatus.CLOSED, closedAt: new Date() }, { transaction: t });
+      await tracker.update(
+        { status: TrackerStatus.CLOSED, closedAt: new Date() },
+        { transaction: t },
+      );
       // Stop recurring generation for a closed tracker
       await TrackerSchedule.update(
         { active: false },
@@ -94,7 +110,8 @@ export class TrackersService {
     this.assertOpen(tracker);
     this.assertInRange(tracker, dto.expenseDate);
 
-    return Expense.create({ ...dto, employeeId: actor.id, trackerId: tracker.id });
+    const category = await this.categories.requireCode(dto.category);
+    return Expense.create({ ...dto, category, employeeId: actor.id, trackerId: tracker.id });
   }
 
   async listExpenses(
@@ -186,7 +203,8 @@ export class TrackersService {
       throw new BadRequestException('endDate cannot be before startDate');
     }
 
-    const schedule = await TrackerSchedule.create({ ...dto, trackerId: tracker.id });
+    const category = await this.categories.requireCode(dto.category);
+    const schedule = await TrackerSchedule.create({ ...dto, category, trackerId: tracker.id });
 
     // Backfill: generate occurrences from startDate up to today right away
     const generated = await this.generateForTracker(tracker);
@@ -198,7 +216,13 @@ export class TrackersService {
 
   async listSchedules(actor: AuthUser, id: string) {
     const tracker = await this.findVisible(actor, id);
-    return TrackerSchedule.findAll({ where: { trackerId: tracker.id }, order: [['createdAt', 'ASC'], ['id', 'ASC']] });
+    return TrackerSchedule.findAll({
+      where: { trackerId: tracker.id },
+      order: [
+        ['createdAt', 'ASC'],
+        ['id', 'ASC'],
+      ],
+    });
   }
 
   async stopSchedule(actor: AuthUser, trackerId: string, scheduleId: string) {
@@ -322,7 +346,11 @@ export class TrackersService {
     const rows = await Expense.findAll({
       where,
       attributes: ['id', 'expenseDate', 'amount', 'category', 'scheduleId'],
-      order: [['expenseDate', 'ASC'], ['createdAt', 'ASC'], ['id', 'ASC']],
+      order: [
+        ['expenseDate', 'ASC'],
+        ['createdAt', 'ASC'],
+        ['id', 'ASC'],
+      ],
       limit: MAX_BULK_SUBMIT + 1,
     });
     const hasMore = rows.length > MAX_BULK_SUBMIT;
@@ -344,7 +372,10 @@ export class TrackersService {
       };
     }
 
-    const outcome = await this.expenses.submitMany(actor, items.map((i) => i.id));
+    const outcome = await this.expenses.submitMany(
+      actor,
+      items.map((i) => i.id),
+    );
     return { dryRun: false, hasMore, ...outcome };
   }
 

@@ -4,10 +4,24 @@ import { useFetch } from '@/lib/use-fetch';
 import { money, formatDate, todayIso, label } from '@/lib/format';
 import type { Expense } from '@/lib/types';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
 import { Field } from '@/components/common/field';
 import { Notice } from '@/components/common/notice';
 import { PageHeader } from '@/components/common/page-header';
@@ -31,17 +45,23 @@ export default function PaymentsPage() {
   const selected = open.find((e) => e.id === expenseId);
   const remaining = selected ? Number(selected.amount) - Number(selected.paidAmount) : 0;
 
-  const reloadAll = () => { approved.reload(); partial.reload(); };
+  const reloadAll = () => {
+    approved.reload();
+    partial.reload();
+  };
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
     setBusy(true);
     setMessage(null);
     try {
-      const res = await api<{ expenseStatus: string; paidAmount: number }>(`/expenses/${expenseId}/payments`, {
-        method: 'POST',
-        json: { amount: Number(amount), paidOn, reference: reference || undefined },
-      });
+      const res = await api<{ expenseStatus: string; paidAmount: number }>(
+        `/expenses/${expenseId}/payments`,
+        {
+          method: 'POST',
+          json: { amount: Number(amount), paidOn, reference: reference || undefined },
+        },
+      );
       setMessage({ kind: 'ok', text: `Payment recorded. Status: ${label(res.expenseStatus)}.` });
       setAmount('');
       setReference('');
@@ -57,35 +77,76 @@ export default function PaymentsPage() {
 
   return (
     <>
-      <PageHeader title="Payments" description="Record payments against approved claims. Partial payments are supported." />
+      <PageHeader
+        title="Reimbursements"
+        description="Record payments against approved claims. Partial payments are supported."
+      />
 
-      {error && <div className="mb-4"><Notice kind="error">{error}</Notice></div>}
-      {message && <div className="mb-4"><Notice kind={message.kind === 'ok' ? 'ok' : 'error'}>{message.text}</Notice></div>}
+      {error && (
+        <div className="mb-4">
+          <Notice kind="error">{error}</Notice>
+        </div>
+      )}
+      {message && (
+        <div className="mb-4">
+          <Notice kind={message.kind === 'ok' ? 'ok' : 'error'}>{message.text}</Notice>
+        </div>
+      )}
 
       <div className="grid gap-6 lg:grid-cols-3">
         <Card className="lg:col-span-1">
           <CardHeader>
             <CardTitle>Record payment</CardTitle>
-            <CardDescription>{selected ? `Outstanding: ${money(remaining, selected.currency)}` : 'Choose a claim'}</CardDescription>
+            <CardDescription>
+              {selected ? `Outstanding: ${money(remaining, selected.currency)}` : 'Choose a claim'}
+            </CardDescription>
           </CardHeader>
           <form onSubmit={onSubmit}>
             <CardContent className="space-y-4">
               <Field label="Claim">
-                <Select required value={expenseId} onChange={(e) => { setExpenseId(e.target.value); setAmount(''); }}>
+                <Select
+                  required
+                  value={expenseId}
+                  onChange={(e) => {
+                    setExpenseId(e.target.value);
+                    setAmount('');
+                  }}
+                >
                   <option value="">Select…</option>
                   {open.map((e) => (
-                    <option key={e.id} value={e.id}>#{e.id} · {label(e.category)} · {money(Number(e.amount) - Number(e.paidAmount))}</option>
+                    <option key={e.id} value={e.id}>
+                      #{e.id} · {label(e.category)} ·{' '}
+                      {money(Number(e.amount) - Number(e.paidAmount))}
+                    </option>
                   ))}
                 </Select>
               </Field>
               <Field label="Amount">
-                <Input type="number" step="0.01" min="0.01" max={remaining || undefined} required value={amount} onChange={(e) => setAmount(e.target.value)} />
+                <Input
+                  type="number"
+                  step="0.01"
+                  min="0.01"
+                  max={remaining || undefined}
+                  required
+                  value={amount}
+                  onChange={(e) => setAmount(e.target.value)}
+                />
               </Field>
               <Field label="Paid on">
-                <Input type="date" required value={paidOn} onChange={(e) => setPaidOn(e.target.value)} />
+                <Input
+                  type="date"
+                  required
+                  value={paidOn}
+                  onChange={(e) => setPaidOn(e.target.value)}
+                />
               </Field>
               <Field label="Reference (optional)">
-                <Input maxLength={100} placeholder="e.g. NEFT-1001" value={reference} onChange={(e) => setReference(e.target.value)} />
+                <Input
+                  maxLength={100}
+                  placeholder="e.g. NEFT-1001"
+                  value={reference}
+                  onChange={(e) => setReference(e.target.value)}
+                />
               </Field>
             </CardContent>
             <CardFooter>
@@ -115,16 +176,26 @@ export default function PaymentsPage() {
               </TableHeader>
               <TableBody>
                 {open.length === 0 && (
-                  <TableRow><TableCell colSpan={6} className="text-muted-foreground">No open claims.</TableCell></TableRow>
+                  <TableRow>
+                    <TableCell colSpan={6} className="text-muted-foreground">
+                      No open claims.
+                    </TableCell>
+                  </TableRow>
                 )}
                 {open.map((e) => (
                   <TableRow key={e.id}>
                     <TableCell>#{e.id}</TableCell>
                     <TableCell>{e.employee?.name ?? '—'}</TableCell>
                     <TableCell>{formatDate(e.expenseDate)}</TableCell>
-                    <TableCell className="text-right tabular-nums">{money(e.amount, e.currency)}</TableCell>
-                    <TableCell className="text-right tabular-nums">{money(Number(e.amount) - Number(e.paidAmount), e.currency)}</TableCell>
-                    <TableCell><StatusBadge status={e.status} /></TableCell>
+                    <TableCell className="text-right tabular-nums">
+                      {money(e.amount, e.currency)}
+                    </TableCell>
+                    <TableCell className="text-right tabular-nums">
+                      {money(Number(e.amount) - Number(e.paidAmount), e.currency)}
+                    </TableCell>
+                    <TableCell>
+                      <StatusBadge status={e.status} />
+                    </TableCell>
                   </TableRow>
                 ))}
               </TableBody>

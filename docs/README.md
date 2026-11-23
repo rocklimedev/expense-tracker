@@ -43,7 +43,7 @@ Access control is **permission based**, not role based. Each role is a list of p
 | `expense.batch_approve` | Approve multiple claims in one request |
 | `payment.record` | Record payments against approved claims |
 | `user.manage` | Create and list users |
-| `role.manage` | Manage roles (planned endpoint) |
+| `role.manage` | Create roles and edit permission grants in Admin |
 | `approval.policy.manage` | Create, list, and deactivate approval policies |
 
 ---
@@ -398,7 +398,7 @@ These came up across the earlier steps. Apply them when you combine the files:
 2. **Unused import.** Remove `Patch` from the imports in `expenses.controller.ts`.
 3. **Expense model.** Add the `Tracker`, `TrackerSchedule`, `Attachment`, and `ExpenseApproval` relations and the `trackerId`, `scheduleId`, and `occurrenceDate` columns, as shown in the tracker and approval sections.
 4. **Expense `paidAmount`.** Keep the default of `0` so payments can start from zero.
-5. **Roles.** Run the seed after changing permissions. Use `GET /users/roles` to look up the UUID to send as `roleId` when creating a user.
+5. **Roles.** Create roles and change grants in Admin. Grant changes take effect on subsequent API requests. Use `GET /users/roles` to look up the UUID to send as `roleId` when creating a user.
 6. **Schema.** Development uses `synchronize: true`, which creates tables from the models. Do not use it in production.
 
 ---

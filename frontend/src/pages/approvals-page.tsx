@@ -9,7 +9,14 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
 import { PageHeader } from '@/components/common/page-header';
 import { Notice } from '@/components/common/notice';
 
@@ -54,13 +61,21 @@ export default function ApprovalsPage() {
   const toggleAll = () => setSelected(allSelected ? new Set() : new Set(items.map((i) => i.id)));
 
   async function approveOne(id: string) {
-    await run(() => api(`/expenses/${id}/approve`, { method: 'POST', json: { comment: comment || undefined } }), 'Approved');
+    await run(
+      () =>
+        api(`/expenses/${id}/approve`, { method: 'POST', json: { comment: comment || undefined } }),
+      'Approved',
+    );
   }
 
   async function rejectOne(e: FormEvent) {
     e.preventDefault();
     if (rejectingId === null) return;
-    await run(() => api(`/expenses/${rejectingId}/reject`, { method: 'POST', json: { reason: rejectReason } }), 'Rejected');
+    await run(
+      () =>
+        api(`/expenses/${rejectingId}/reject`, { method: 'POST', json: { reason: rejectReason } }),
+      'Rejected',
+    );
     setRejectingId(null);
     setRejectReason('');
   }
@@ -101,7 +116,7 @@ export default function ApprovalsPage() {
   return (
     <>
       <PageHeader
-        title="Approval queue"
+        title="To approve"
         description="Claims waiting for your approval step."
         actions={
           canBatch && (
@@ -113,7 +128,11 @@ export default function ApprovalsPage() {
       />
 
       {error && <Notice kind="error">{error}</Notice>}
-      {message && <div className="mb-4"><Notice kind={message.kind === 'ok' ? 'ok' : 'error'}>{message.text}</Notice></div>}
+      {message && (
+        <div className="mb-4">
+          <Notice kind={message.kind === 'ok' ? 'ok' : 'error'}>{message.text}</Notice>
+        </div>
+      )}
 
       {batchResult && (
         <div className="mb-4">
@@ -122,7 +141,9 @@ export default function ApprovalsPage() {
             {batchResult.failed.length > 0 && (
               <ul className="mt-2 list-disc pl-5">
                 {batchResult.failed.map((f) => (
-                  <li key={f.id}>#{f.id}: {f.error}</li>
+                  <li key={f.id}>
+                    #{f.id}: {f.error}
+                  </li>
                 ))}
               </ul>
             )}
@@ -131,7 +152,11 @@ export default function ApprovalsPage() {
       )}
 
       <div className="mb-4 max-w-md">
-        <Input placeholder="Optional comment for approvals" value={comment} onChange={(e) => setComment(e.target.value)} />
+        <Input
+          placeholder="Optional comment for approvals"
+          value={comment}
+          onChange={(e) => setComment(e.target.value)}
+        />
       </div>
 
       <Card>
@@ -145,7 +170,12 @@ export default function ApprovalsPage() {
               <TableRow>
                 {canBatch && (
                   <TableHead className="w-10">
-                    <input type="checkbox" aria-label="Select all" checked={allSelected} onChange={toggleAll} />
+                    <input
+                      type="checkbox"
+                      aria-label="Select all"
+                      checked={allSelected}
+                      onChange={toggleAll}
+                    />
                   </TableHead>
                 )}
                 <TableHead>Claim</TableHead>
@@ -158,19 +188,39 @@ export default function ApprovalsPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {loading && !data && <TableRow><TableCell colSpan={8}>Loading…</TableCell></TableRow>}
+              {loading && !data && (
+                <TableRow>
+                  <TableCell colSpan={8}>Loading…</TableCell>
+                </TableRow>
+              )}
               {!loading && items.length === 0 && (
-                <TableRow><TableCell colSpan={8} className="text-muted-foreground">Nothing waiting for you.</TableCell></TableRow>
+                <TableRow>
+                  <TableCell colSpan={8} className="text-muted-foreground">
+                    Nothing waiting for you.
+                  </TableCell>
+                </TableRow>
               )}
               {items.map((item) => (
                 <Fragment key={item.id}>
                   <TableRow>
                     {canBatch && (
                       <TableCell>
-                        <input type="checkbox" aria-label={`Select #${item.id}`} checked={selected.has(item.id)} onChange={() => toggle(item.id)} />
+                        <input
+                          type="checkbox"
+                          aria-label={`Select #${item.id}`}
+                          checked={selected.has(item.id)}
+                          onChange={() => toggle(item.id)}
+                        />
                       </TableCell>
                     )}
-                    <TableCell><Link to={`/expenses/${item.id}`} className="font-medium text-primary hover:underline">#{item.id}</Link></TableCell>
+                    <TableCell>
+                      <Link
+                        to={`/expenses/${item.id}`}
+                        className="font-medium text-primary hover:underline"
+                      >
+                        #{item.id}
+                      </Link>
+                    </TableCell>
                     <TableCell>{item.employee?.name}</TableCell>
                     <TableCell>{label(item.category)}</TableCell>
                     <TableCell>{formatDate(item.expenseDate)}</TableCell>
@@ -180,7 +230,12 @@ export default function ApprovalsPage() {
                     </TableCell>
                     <TableCell>
                       <div className="flex justify-end gap-2">
-                        <Button size="sm" variant="outline" disabled={busy} onClick={() => setRejectingId(item.id)}>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          disabled={busy}
+                          onClick={() => setRejectingId(item.id)}
+                        >
                           <X className="h-3.5 w-3.5" /> Reject
                         </Button>
                         <Button size="sm" disabled={busy} onClick={() => approveOne(item.id)}>
@@ -193,9 +248,24 @@ export default function ApprovalsPage() {
                     <TableRow>
                       <TableCell colSpan={8}>
                         <form onSubmit={rejectOne} className="flex items-start gap-2">
-                          <Textarea required minLength={3} maxLength={500} placeholder="Reason for rejecting this claim" value={rejectReason} onChange={(e) => setRejectReason(e.target.value)} />
-                          <Button type="button" variant="outline" onClick={() => setRejectingId(null)}>Cancel</Button>
-                          <Button type="submit" variant="destructive" disabled={busy}>Confirm reject</Button>
+                          <Textarea
+                            required
+                            minLength={3}
+                            maxLength={500}
+                            placeholder="Reason for rejecting this claim"
+                            value={rejectReason}
+                            onChange={(e) => setRejectReason(e.target.value)}
+                          />
+                          <Button
+                            type="button"
+                            variant="outline"
+                            onClick={() => setRejectingId(null)}
+                          >
+                            Cancel
+                          </Button>
+                          <Button type="submit" variant="destructive" disabled={busy}>
+                            Confirm reject
+                          </Button>
                         </form>
                       </TableCell>
                     </TableRow>

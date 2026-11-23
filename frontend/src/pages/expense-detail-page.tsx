@@ -9,8 +9,16 @@ import type { ApprovalStep, Attachment, Expense, Payment } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
 import { Notice } from '@/components/common/notice';
+import { Receipt } from '@/components/common/receipt';
 import { StatusBadge } from '@/components/common/status-badge';
 import { CategoryTile } from '@/components/common/category-tile';
 import { ApprovalStepper } from '@/components/common/approval-stepper';
@@ -71,7 +79,6 @@ export default function ExpenseDetailPage() {
   const amount = Number(expense.amount);
   const paid = Number(expense.paidAmount);
   const outstanding = amount - paid;
-  const paidPct = amount > 0 ? Math.min(100, Math.round((paid / amount) * 100)) : 0;
 
   const planned = !expense.approvals?.length;
   const steps: ApprovalStep[] = expense.approvals?.length
@@ -96,18 +103,24 @@ export default function ExpenseDetailPage() {
     }
   }
 
-  const submit = () => run(() => api(`/expenses/${expense.id}/submit`, { method: 'POST' }), 'Submitted for approval');
+  const submit = () =>
+    run(() => api(`/expenses/${expense.id}/submit`, { method: 'POST' }), 'Submitted for approval');
 
   const approve = () =>
     run(
-      () => api(`/expenses/${expense.id}/approve`, { method: 'POST', json: { comment: comment || undefined } }),
+      () =>
+        api(`/expenses/${expense.id}/approve`, {
+          method: 'POST',
+          json: { comment: comment || undefined },
+        }),
       'Step approved',
     ).then(() => setComment(''));
 
   const reject = (e: FormEvent) => {
     e.preventDefault();
     run(
-      () => api(`/expenses/${expense.id}/reject`, { method: 'POST', json: { reason: rejectReason } }),
+      () =>
+        api(`/expenses/${expense.id}/reject`, { method: 'POST', json: { reason: rejectReason } }),
       'Expense rejected',
     ).then(() => {
       setShowReject(false);
@@ -120,7 +133,10 @@ export default function ExpenseDetailPage() {
     if (!file) return;
     const form = new FormData();
     form.append('file', file);
-    run(() => api(`/expenses/${expense.id}/attachments`, { method: 'POST', body: form }), 'Receipt uploaded');
+    run(
+      () => api(`/expenses/${expense.id}/attachments`, { method: 'POST', body: form }),
+      'Receipt uploaded',
+    );
     ev.target.value = '';
   };
 
@@ -130,11 +146,14 @@ export default function ExpenseDetailPage() {
       : 'Add receipts if you have them, then submit.'
     : showDecision
       ? 'Review the claim, then approve or reject this step.'
-      : WAITING_TEXT[expense.status] ?? 'No action needed from you right now.';
+      : (WAITING_TEXT[expense.status] ?? 'No action needed from you right now.');
 
   return (
     <div className="space-y-6">
-      <Link to="/expenses" className="inline-flex items-center gap-1.5 text-sm font-medium text-muted-foreground hover:text-foreground">
+      <Link
+        to="/expenses"
+        className="inline-flex items-center gap-1.5 text-sm font-medium text-muted-foreground hover:text-foreground"
+      >
         <ArrowLeft className="h-4 w-4" /> All expenses
       </Link>
 
@@ -142,9 +161,11 @@ export default function ExpenseDetailPage() {
         <div className="flex min-w-0 items-center gap-4">
           <CategoryTile category={expense.category} className="h-12 w-12 rounded-2xl" />
           <div className="min-w-0">
-            <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">{label(expense.category)} expense</h1>
+            <h1 className="truncate text-2xl font-semibold tracking-tight sm:text-3xl">
+              {expense.description || `${label(expense.category)} expense`}
+            </h1>
             <p className="mt-1 truncate text-sm text-muted-foreground">
-              #{expense.id.slice(0, 8)} · {formatDate(expense.expenseDate)}
+              {label(expense.category)} · {formatDate(expense.expenseDate)}
               {expense.employee ? ` · ${expense.employee.name}` : ''}
             </p>
           </div>
@@ -168,7 +189,8 @@ export default function ExpenseDetailPage() {
             <CardContent className="space-y-3">
               {editable && (
                 <Button className="h-10 w-full" disabled={busy} onClick={submit}>
-                  <Send className="h-4 w-4" /> {expense.status === 'REJECTED' ? 'Resubmit for approval' : 'Submit for approval'}
+                  <Send className="h-4 w-4" />{' '}
+                  {expense.status === 'REJECTED' ? 'Resubmit for approval' : 'Submit for approval'}
                 </Button>
               )}
 
@@ -186,12 +208,19 @@ export default function ExpenseDetailPage() {
                     </Button>
                   )}
                   {canReject && !showReject && (
-                    <Button variant="outline" className="h-10 w-full" onClick={() => setShowReject(true)}>
+                    <Button
+                      variant="outline"
+                      className="h-10 w-full"
+                      onClick={() => setShowReject(true)}
+                    >
                       Reject…
                     </Button>
                   )}
                   {canReject && showReject && (
-                    <form onSubmit={reject} className="space-y-2 rounded-lg border border-rose-200 bg-rose-50/50 p-3">
+                    <form
+                      onSubmit={reject}
+                      className="space-y-2 rounded-lg border border-rose-200 bg-rose-50/50 p-3"
+                    >
                       <Textarea
                         required
                         minLength={3}
@@ -201,10 +230,20 @@ export default function ExpenseDetailPage() {
                         onChange={(e) => setRejectReason(e.target.value)}
                       />
                       <div className="flex gap-2">
-                        <Button type="button" variant="outline" className="flex-1" onClick={() => setShowReject(false)}>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          className="flex-1"
+                          onClick={() => setShowReject(false)}
+                        >
                           Cancel
                         </Button>
-                        <Button type="submit" variant="destructive" className="flex-1" disabled={busy}>
+                        <Button
+                          type="submit"
+                          variant="destructive"
+                          className="flex-1"
+                          disabled={busy}
+                        >
                           Reject claim
                         </Button>
                       </div>
@@ -217,49 +256,31 @@ export default function ExpenseDetailPage() {
         </aside>
 
         <div className="space-y-6 lg:col-span-2">
-          {/* Amount hero */}
-          <Card className="p-6 sm:p-8">
-            <p className="text-sm text-muted-foreground">Claimed amount</p>
-            <p className="mt-1 text-4xl font-semibold tabular-nums tracking-tight">{money(expense.amount, expense.currency)}</p>
-
-            <div className="mt-6">
-              <div
-                className="h-2 overflow-hidden rounded-full bg-muted"
-                role="progressbar"
-                aria-valuenow={paidPct}
-                aria-valuemin={0}
-                aria-valuemax={100}
-                aria-label="Share of claim paid"
-              >
-                <div className="h-full rounded-full bg-emerald-500 transition-all" style={{ width: `${paidPct}%` }} />
-              </div>
-              <div className="mt-2 flex justify-between text-xs text-muted-foreground">
-                <span>{paidPct}% paid · {money(paid, expense.currency)}</span>
-                <span>{money(outstanding, expense.currency)} outstanding</span>
-              </div>
-            </div>
-
-            <dl className="mt-6 grid grid-cols-2 gap-4 border-t pt-6 text-sm sm:grid-cols-3">
-              <div>
-                <dt className="text-xs text-muted-foreground">Expense date</dt>
-                <dd className="mt-1 font-medium">{formatDate(expense.expenseDate)}</dd>
-              </div>
-              <div>
-                <dt className="text-xs text-muted-foreground">Submitted</dt>
-                <dd className="mt-1 font-medium">{expense.submittedAt ? formatDateTime(expense.submittedAt) : 'Not yet'}</dd>
-              </div>
-              <div className="col-span-2 sm:col-span-1">
-                <dt className="text-xs text-muted-foreground">Note</dt>
-                <dd className="mt-1 font-medium">{expense.description || '—'}</dd>
-              </div>
-            </dl>
-          </Card>
+          <Receipt
+            reference={expense.id.slice(0, 8).toUpperCase()}
+            amount={amount}
+            paid={paid}
+            outstanding={outstanding}
+            currency={expense.currency}
+            lines={[
+              { label: 'Category', value: label(expense.category) },
+              { label: 'Expense date', value: formatDate(expense.expenseDate) },
+              {
+                label: 'Submitted',
+                value: expense.submittedAt ? formatDateTime(expense.submittedAt) : 'Not yet',
+              },
+              ...(expense.employee ? [{ label: 'Employee', value: expense.employee.name }] : []),
+              { label: 'Note', value: expense.description || '—' },
+            ]}
+          />
 
           <Card>
             <CardHeader>
               <CardTitle>Approval chain</CardTitle>
               <CardDescription>
-                {planned ? 'Who will need to approve this, based on the amount.' : 'Each step must be approved in order.'}
+                {planned
+                  ? 'Who will need to approve this, based on the amount.'
+                  : 'Each step must be approved in order.'}
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -287,12 +308,18 @@ export default function ExpenseDetailPage() {
                   </span>
                   <div className="min-w-0 flex-1">
                     <div className="truncate text-sm font-medium">{a.originalName}</div>
-                    <div className="text-xs text-muted-foreground">{Math.max(1, Math.round(a.sizeBytes / 1024))} KB</div>
+                    <div className="text-xs text-muted-foreground">
+                      {Math.max(1, Math.round(a.sizeBytes / 1024))} KB
+                    </div>
                   </div>
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={() => openAttachment(a.id).catch((err) => setFeedback({ kind: 'error', text: err.message }))}
+                    onClick={() =>
+                      openAttachment(a.id).catch((err) =>
+                        setFeedback({ kind: 'error', text: err.message }),
+                      )
+                    }
                   >
                     <Download className="h-3.5 w-3.5" /> Open
                   </Button>
@@ -302,7 +329,18 @@ export default function ExpenseDetailPage() {
                       size="sm"
                       aria-label={`Remove ${a.originalName}`}
                       disabled={busy}
-                      onClick={() => run(() => api(`/attachments/${a.id}`, { method: 'DELETE' }), 'Receipt removed')}
+                      onClick={() => {
+                        if (
+                          window.confirm(
+                            `Remove "${a.originalName}" from this claim? This cannot be undone.`,
+                          )
+                        ) {
+                          run(
+                            () => api(`/attachments/${a.id}`, { method: 'DELETE' }),
+                            'Receipt removed',
+                          );
+                        }
+                      }}
                     >
                       <Trash2 className="h-3.5 w-3.5" />
                     </Button>
@@ -312,13 +350,15 @@ export default function ExpenseDetailPage() {
               {editable && (
                 <label
                   className={cn(
-                    'flex cursor-pointer flex-col items-center gap-1.5 rounded-lg border border-dashed p-6 text-center transition-colors hover:border-primary hover:bg-accent/40',
+                    'flex cursor-pointer flex-col items-center gap-1.5 rounded-lg border border-dashed p-6 text-center transition-colors hover:border-primary hover:bg-accent/40 focus-within:ring-2 focus-within:ring-ring',
                     busy && 'pointer-events-none opacity-60',
                   )}
                 >
                   <Upload className="h-5 w-5 text-primary" />
                   <span className="text-sm font-medium">Add a receipt</span>
-                  <span className="text-xs text-muted-foreground">JPEG, PNG, WEBP or PDF · up to 5 MB</span>
+                  <span className="text-xs text-muted-foreground">
+                    JPEG, PNG, WEBP or PDF · up to 5 MB
+                  </span>
                   <input
                     type="file"
                     accept="image/jpeg,image/png,image/webp,application/pdf"
@@ -350,12 +390,16 @@ export default function ExpenseDetailPage() {
                       <TableRow key={p.id}>
                         <TableCell className="px-6">{formatDate(p.paidOn)}</TableCell>
                         <TableCell>{p.reference || '—'}</TableCell>
-                        <TableCell className="px-6 text-right font-medium tabular-nums">{money(p.amount, expense.currency)}</TableCell>
+                        <TableCell className="px-6 text-right font-medium tabular-nums">
+                          {money(p.amount, expense.currency)}
+                        </TableCell>
                       </TableRow>
                     ))}
                     {payments.length === 0 && (
                       <TableRow>
-                        <TableCell colSpan={3} className="px-6 text-muted-foreground">No payments yet.</TableCell>
+                        <TableCell colSpan={3} className="px-6 text-muted-foreground">
+                          No payments yet.
+                        </TableCell>
                       </TableRow>
                     )}
                   </TableBody>
@@ -373,7 +417,10 @@ export default function ExpenseDetailPage() {
                 <ol className="ml-2 space-y-5 border-l pl-6">
                   {expense.history.map((h) => (
                     <li key={h.id} className="relative">
-                      <span className="absolute -left-[29px] top-1.5 h-2.5 w-2.5 rounded-full bg-primary ring-4 ring-card" aria-hidden />
+                      <span
+                        className="absolute -left-[29px] top-1.5 h-2.5 w-2.5 rounded-full bg-primary ring-4 ring-card"
+                        aria-hidden
+                      />
                       <div className="text-sm font-medium">
                         {h.fromStatus ? `${label(h.fromStatus)} → ` : ''}
                         {label(h.toStatus)}

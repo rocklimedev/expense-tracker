@@ -16,7 +16,7 @@ export class ApprovalPolicy extends Model {
   @Column(DataType.STRING(120))
   name!: string;
 
-  @Column(DataType.STRING(60))
+  @Column({ type: DataType.STRING(60), references: { model: 'expense_categories', key: 'code' } })
   category!: string | null;
 
   @Default(0)

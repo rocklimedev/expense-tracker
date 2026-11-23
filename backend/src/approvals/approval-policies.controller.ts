@@ -1,5 +1,13 @@
 import {
-  Body, Controller, Get, Param, ParseFloatPipe, ParseUUIDPipe, Post, Query, UseGuards,
+  Body,
+  Controller,
+  Get,
+  Param,
+  ParseFloatPipe,
+  ParseUUIDPipe,
+  Post,
+  Query,
+  UseGuards,
 } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { PermissionsGuard } from '../common/guards/permissions.guard';
@@ -27,10 +35,7 @@ export class ApprovalPoliciesController {
 
   // Declared before ":id" routes; any signed-in user can preview the chain before submitting
   @Get('preview')
-  preview(
-    @Query('amount', ParseFloatPipe) amount: number,
-    @Query('category') category: string,
-  ) {
+  preview(@Query('amount', ParseFloatPipe) amount: number, @Query('category') category: string) {
     return this.policies.resolveSteps(amount, category);
   }
 

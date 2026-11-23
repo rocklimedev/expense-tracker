@@ -1,5 +1,11 @@
 import {
-  ArrayMaxSize, ArrayNotEmpty, IsArray, IsUUID, IsOptional, IsString, Length,
+  ArrayMaxSize,
+  ArrayNotEmpty,
+  IsArray,
+  IsUUID,
+  IsOptional,
+  IsString,
+  Length,
 } from 'class-validator';
 
 export class BatchApproveDto {

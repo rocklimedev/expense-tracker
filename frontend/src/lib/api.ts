@@ -42,7 +42,7 @@ export async function api<T>(path: string, init: ApiInit = {}): Promise<T> {
     const data = await res.json().catch(() => null);
     const message = Array.isArray(data?.message)
       ? data.message.join(', ')
-      : data?.message ?? res.statusText;
+      : (data?.message ?? res.statusText);
     throw new ApiError(res.status, message);
   }
 
@@ -59,4 +59,5 @@ export async function openAttachment(id: string) {
   if (!res.ok) throw new ApiError(res.status, 'Could not open the receipt');
   const url = URL.createObjectURL(await res.blob());
   window.open(url, '_blank', 'noopener');
+  setTimeout(() => URL.revokeObjectURL(url), 60_000);
 }

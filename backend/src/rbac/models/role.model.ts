@@ -9,7 +9,4 @@ export class Role extends Model {
   @AllowNull(false)
   @Column(DataType.STRING(50))
   name!: string;
-
-  @Column(DataType.JSON)
-  permissions!: string[];
 }

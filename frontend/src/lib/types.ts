@@ -1,10 +1,20 @@
 export type ExpenseStatus =
-  | 'DRAFT' | 'SUBMITTED' | 'APPROVED' | 'REJECTED' | 'PARTIALLY_PAID' | 'PAID';
+  | 'DRAFT'
+  | 'SUBMITTED'
+  | 'APPROVED'
+  | 'REJECTED'
+  | 'PARTIALLY_PAID'
+  | 'PAID';
+
+export interface ExpenseCategory {
+  code: string;
+}
 
 export interface Me {
   id: string;
   name: string;
   role: string;
+  roleId: string;
   permissions: string[];
 }
 

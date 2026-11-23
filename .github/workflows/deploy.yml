@@ -1,0 +1,115 @@
+name: Publish and deploy expense tracker
+
+on:
+  push:
+    branches: [main]
+
+  workflow_dispatch:
+    inputs:
+      publish_only:
+        description: Publish image without deploying to VPS
+        type: boolean
+        default: false
+
+concurrency:
+  group: expense-tracker-production
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-24.04
+
+    permissions:
+      contents: read
+      packages: write
+
+    outputs:
+      backend: ${{ steps.images.outputs.backend }}
+
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+
+      - name: Login to GHCR
+        env:
+          GHCR_TOKEN: ${{ secrets.GHCR_TOKEN }}
+        run: |
+          printf '%s' "$GHCR_TOKEN" | docker login ghcr.io \
+            --username "$GITHUB_ACTOR" \
+            --password-stdin
+
+      - name: Build and publish backend
+        id: images
+        run: |
+          image="ghcr.io/${GITHUB_REPOSITORY,,}-backend"
+          metadata="$RUNNER_TEMP/backend-build.json"
+
+          docker buildx build \
+            --platform linux/amd64 \
+            --push \
+            --label "org.opencontainers.image.source=$GITHUB_SERVER_URL/$GITHUB_REPOSITORY" \
+            --label "org.opencontainers.image.revision=$GITHUB_SHA" \
+            --tag "$image:$GITHUB_SHA" \
+            --metadata-file "$metadata" \
+            backend
+
+          digest=$(jq -er '."containerimage.digest"' "$metadata")
+
+          echo "backend=$image@$digest" >> "$GITHUB_OUTPUT"
+
+  deploy:
+    needs: publish
+
+    if: >-
+      github.ref == 'refs/heads/main' &&
+      inputs.publish_only != true
+
+    runs-on: ubuntu-24.04
+
+    permissions:
+      contents: read
+
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+
+      - name: Deploy to VPS
+        env:
+          VPS_HOST: 66.116.204.81
+          VPS_USER: root
+          VPS_PORT: 22
+
+          VPS_SSH_KEY: ${{ secrets.VPS_SSH_KEY }}
+          BACKEND_IMAGE: ${{ needs.publish.outputs.backend }}
+
+        run: |
+          umask 077
+
+          ssh_dir=$(mktemp -d)
+          trap 'rm -rf "$ssh_dir"' EXIT
+
+          printf '%s\n' "$VPS_SSH_KEY" > "$ssh_dir/key"
+
+          ssh_options=(
+            -p "$VPS_PORT"
+            -i "$ssh_dir/key"
+            -o IdentitiesOnly=yes
+            -o BatchMode=yes
+            -o ConnectTimeout=15
+          )
+
+          target="$VPS_USER@$VPS_HOST"
+          APP_DIR="/opt/apps/expense-tracker-api"
+
+          # Upload Compose file
+          scp "${ssh_options[@]}" \
+            compose.yaml \
+            "$target:$APP_DIR/compose.yaml"
+
+          # Deploy backend
+          ssh "${ssh_options[@]}" "$target" \
+            "cd '$APP_DIR' && BACKEND_IMAGE='$BACKEND_IMAGE' docker compose pull && BACKEND_IMAGE='$BACKEND_IMAGE' docker compose up -d --wait --wait-timeout 180"
+
+          echo "Expense Tracker deployed successfully."

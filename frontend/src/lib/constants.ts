@@ -1,5 +1,3 @@
-export const CATEGORIES = ['TRAVEL', 'MEALS', 'SUPPLIES', 'ACCOMMODATION', 'OTHER'] as const;
-
 export const FREQUENCIES = ['DAILY', 'WEEKLY', 'MONTHLY'] as const;
 
 export const APPROVAL_PERMISSIONS = [

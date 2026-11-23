@@ -1,0 +1,18 @@
+{$APP_SITE} {
+	encode zstd gzip
+	header X-Content-Type-Options nosniff
+
+	handle_path /api/* {
+		header >Cache-Control "private, no-store"
+		reverse_proxy backend:3000
+	}
+
+	handle {
+		respond 404
+	}
+}
+
+http://127.0.0.1:2015 {
+	bind 127.0.0.1
+	respond /healthz "OK" 200
+}

@@ -1,6 +1,6 @@
 import { useState, type FormEvent } from 'react';
-import { Navigate, useNavigate } from 'react-router-dom';
-import { ShieldCheck, Wallet, Zap } from 'lucide-react';
+import { Navigate } from 'react-router-dom';
+import { Eye, EyeOff, ShieldCheck, Wallet, Zap } from 'lucide-react';
 import { useAuth } from '@/context/auth-context';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -14,13 +14,13 @@ const HIGHLIGHTS = [
 
 export default function LoginPage() {
   const { login, user } = useAuth();
-  const navigate = useNavigate();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
-  if (user) return <Navigate to="/expenses" replace />;
+  if (user) return <Navigate to="/" replace />;
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
@@ -28,7 +28,6 @@ export default function LoginPage() {
     setError(null);
     try {
       await login(email, password);
-      navigate('/expenses', { replace: true });
     } catch (err) {
       setError((err as Error).message);
     } finally {
@@ -46,7 +45,9 @@ export default function LoginPage() {
           Expense Tracker
         </div>
         <div className="max-w-md">
-          <h2 className="text-4xl font-semibold leading-tight tracking-tight">Every claim, from receipt to reimbursement.</h2>
+          <h2 className="text-4xl font-semibold leading-tight tracking-tight">
+            Know where every rupee goes.
+          </h2>
           <ul className="mt-8 space-y-4">
             {HIGHLIGHTS.map(({ icon: Icon, text }) => (
               <li key={text} className="flex items-start gap-3 text-primary-foreground/90">
@@ -58,7 +59,9 @@ export default function LoginPage() {
             ))}
           </ul>
         </div>
-        <p className="text-xs text-primary-foreground/70">Approvals, payments and receipts in one place.</p>
+        <p className="text-xs text-primary-foreground/70">
+          Approvals, payments and receipts in one place.
+        </p>
       </aside>
 
       <main className="flex items-center justify-center p-6 sm:p-12">
@@ -85,15 +88,27 @@ export default function LoginPage() {
                 onChange={(e) => setEmail(e.target.value)}
               />
             </Field>
-            <Field label="Password">
-              <Input
-                type="password"
-                autoComplete="current-password"
-                required
-                className="h-11"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-              />
+            <Field label="Password" htmlFor="password">
+              <div className="relative">
+                <Input
+                  id="password"
+                  type={showPassword ? 'text' : 'password'}
+                  autoComplete="current-password"
+                  required
+                  className="h-11 pr-11"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword((v) => !v)}
+                  aria-label={showPassword ? 'Hide password' : 'Show password'}
+                  aria-pressed={showPassword}
+                  className="absolute right-1 top-1/2 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                >
+                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </button>
+              </div>
             </Field>
             {error && <Notice kind="error">{error}</Notice>}
             <Button type="submit" className="h-11 w-full text-sm" disabled={busy}>

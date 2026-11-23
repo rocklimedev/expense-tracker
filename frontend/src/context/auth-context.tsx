@@ -1,4 +1,12 @@
-import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+  type ReactNode,
+} from 'react';
 import { api, tokenStore } from '@/lib/api';
 import type { Me } from '@/lib/types';
 
@@ -7,6 +15,7 @@ interface AuthState {
   loading: boolean;
   login: (email: string, password: string) => Promise<void>;
   logout: () => void;
+  refreshPermissions: () => Promise<void>;
   can: (permission: string) => boolean;
 }
 
@@ -41,15 +50,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(null);
   }, []);
 
+  const refreshPermissions = useCallback(async () => {
+    const token = tokenStore.get();
+    const currentUser = await api<Me>('/auth/me');
+    if (tokenStore.get() === token) setUser(currentUser);
+  }, []);
+
   const value = useMemo<AuthState>(
     () => ({
       user,
       loading,
       login,
       logout,
+      refreshPermissions,
       can: (permission) => !!user?.permissions.includes(permission),
     }),
-    [user, loading, login, logout],
+    [user, loading, login, logout, refreshPermissions],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

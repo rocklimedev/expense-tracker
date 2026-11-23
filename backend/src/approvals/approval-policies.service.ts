@@ -3,6 +3,7 @@ import { InjectConnection } from '@nestjs/sequelize';
 import { Sequelize } from 'sequelize-typescript';
 import { Op } from 'sequelize';
 import { Permissions } from '../common/permissions';
+import { ExpenseCategoriesService } from '../expense-categories/expense-categories.service';
 import { ApprovalPolicy } from './models/approval-policy.model';
 import { ApprovalPolicyStep } from './models/approval-policy-step.model';
 import { CreateApprovalPolicyDto } from './dto/create-approval-policy.dto';
@@ -20,14 +21,18 @@ const DEFAULT_STEPS: ResolvedStep[] = [
 
 @Injectable()
 export class ApprovalPoliciesService {
-  constructor(@InjectConnection() private sequelize: Sequelize) {}
+  constructor(
+    @InjectConnection() private sequelize: Sequelize,
+    private readonly categories: ExpenseCategoriesService,
+  ) {}
 
   async create(dto: CreateApprovalPolicyDto) {
+    const category = dto.category == null ? null : await this.categories.requireCode(dto.category);
     const id = await this.sequelize.transaction(async (t) => {
       const policy = await ApprovalPolicy.create(
         {
           name: dto.name,
-          category: dto.category ?? null,
+          category,
           minAmount: dto.minAmount,
           priority: dto.priority ?? 0,
         },
@@ -87,7 +92,12 @@ export class ApprovalPoliciesService {
         minAmount: { [Op.lte]: amount },
         [Op.or]: [{ category: null }, { category }],
       },
-      order: [['priority', 'DESC'], ['minAmount', 'DESC'], ['createdAt', 'ASC'], ['id', 'ASC']],
+      order: [
+        ['priority', 'DESC'],
+        ['minAmount', 'DESC'],
+        ['createdAt', 'ASC'],
+        ['id', 'ASC'],
+      ],
     });
     if (!policy) return DEFAULT_STEPS;
 

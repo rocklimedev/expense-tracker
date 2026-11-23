@@ -1,5 +1,12 @@
 import {
-  AllowNull, BelongsTo, Column, DataType, ForeignKey, Model, Table, Unique,
+  AllowNull,
+  BelongsTo,
+  Column,
+  DataType,
+  ForeignKey,
+  Model,
+  Table,
+  Unique,
 } from 'sequelize-typescript';
 import { Expense } from '../../expenses/models/expense.model';
 

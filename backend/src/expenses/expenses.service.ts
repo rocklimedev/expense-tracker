@@ -1,13 +1,19 @@
 import {
-  BadRequestException, ForbiddenException, HttpException, Injectable, NotFoundException,
+  BadRequestException,
+  ForbiddenException,
+  HttpException,
+  Injectable,
+  NotFoundException,
 } from '@nestjs/common';
 import { InjectConnection } from '@nestjs/sequelize';
 import { Sequelize } from 'sequelize-typescript';
-import { Transaction } from 'sequelize';
+import { Op, Transaction } from 'sequelize';
 import { Permissions } from '../common/permissions';
 import { AuthUser } from '../common/types';
 import { User } from '../users/models/user.model';
+import { Payment } from '../payments/models/payment.model';
 import { ApprovalPoliciesService } from '../approvals/approval-policies.service';
+import { ExpenseCategoriesService } from '../expense-categories/expense-categories.service';
 import { Expense } from './models/expense.model';
 import { ExpenseHistory } from './models/expense-history.model';
 import { ExpenseApproval, ApprovalStatus } from './models/expense-approval.model';
@@ -26,6 +32,7 @@ export class ExpensesService {
   constructor(
     @InjectConnection() private sequelize: Sequelize,
     private readonly policies: ApprovalPoliciesService,
+    private readonly categories: ExpenseCategoriesService,
   ) {}
 
   // ---------- Shared state-change helper ----------
@@ -94,8 +101,9 @@ export class ExpensesService {
   }
 
   // ---------- Employee actions ----------
-  create(actor: AuthUser, dto: CreateExpenseDto) {
-    return Expense.create({ ...dto, employeeId: actor.id });
+  async create(actor: AuthUser, dto: CreateExpenseDto) {
+    const category = await this.categories.requireCode(dto.category);
+    return Expense.create({ ...dto, category, employeeId: actor.id });
   }
 
   /**
@@ -148,6 +156,40 @@ export class ExpensesService {
   }
 
   // ---------- Queries (scoped by permission) ----------
+  approvedForMe(actor: AuthUser) {
+    if (
+      !hasPermission(actor, Permissions.EXPENSE_VIEW_OWN) &&
+      !hasPermission(actor, Permissions.EXPENSE_VIEW_ALL)
+    ) {
+      throw new ForbiddenException('Your role does not have permission to view expenses');
+    }
+
+    return Expense.findAll({
+      where: {
+        employeeId: actor.id,
+        status: {
+          [Op.in]: [ExpenseStatus.APPROVED, ExpenseStatus.PARTIALLY_PAID, ExpenseStatus.PAID],
+        },
+      },
+      attributes: [
+        'id',
+        'category',
+        'description',
+        'expenseDate',
+        'currency',
+        'amount',
+        'paidAmount',
+        'status',
+      ],
+      include: [{ model: Payment, attributes: ['id', 'amount', 'paidOn', 'reference'] }],
+      order: [
+        ['expenseDate', 'DESC'],
+        ['createdAt', 'DESC'],
+        ['id', 'ASC'],
+      ],
+    });
+  }
+
   async list(actor: AuthUser, filters: { status?: ExpenseStatus; employeeId?: string }) {
     const where: Record<string, unknown> = {};
     if (filters.status) where.status = filters.status;
@@ -177,7 +219,9 @@ export class ExpensesService {
     });
     if (!expense) throw new NotFoundException('Expense not found');
 
-    if (!hasPermission(actor, Permissions.EXPENSE_VIEW_ALL) && expense.employeeId !== actor.id) {
+    const canViewOwn =
+      hasPermission(actor, Permissions.EXPENSE_VIEW_OWN) && expense.employeeId === actor.id;
+    if (!hasPermission(actor, Permissions.EXPENSE_VIEW_ALL) && !canViewOwn) {
       throw new ForbiddenException();
     }
     return expense;
@@ -190,10 +234,7 @@ export class ExpensesService {
   async pendingForMe(actor: AuthUser) {
     const expenses = await Expense.findAll({
       where: { status: ExpenseStatus.SUBMITTED },
-      include: [
-        { model: User, attributes: ['id', 'name'] },
-        { model: ExpenseApproval },
-      ],
+      include: [{ model: User, attributes: ['id', 'name'] }, { model: ExpenseApproval }],
       order: [['submittedAt', 'ASC']],
       limit: 500,
     });
@@ -203,7 +244,8 @@ export class ExpensesService {
       if (e.employeeId === actor.id) continue;
 
       const steps = [...(e.approvals ?? [])].sort((a, b) => a.stepOrder - b.stepOrder);
-      if (steps.some((s) => s.status === ApprovalStatus.APPROVED && s.actedById === actor.id)) continue;
+      if (steps.some((s) => s.status === ApprovalStatus.APPROVED && s.actedById === actor.id))
+        continue;
 
       const current = steps.find((s) => s.status === ApprovalStatus.PENDING);
       if (!current || !hasPermission(actor, current.requiredPermission)) continue;
@@ -247,7 +289,10 @@ export class ExpensesService {
       );
       if (!next) {
         return this.transition(
-          expense, ExpenseStatus.APPROVED, actor, t,
+          expense,
+          ExpenseStatus.APPROVED,
+          actor,
+          t,
           { approvedById: actor.id, approvedAt: new Date() },
           comment,
         );
@@ -279,12 +324,20 @@ export class ExpensesService {
       const { expense, current } = await this.loadCurrentStep(actor, id, t);
 
       await current.update(
-        { status: ApprovalStatus.REJECTED, actedById: actor.id, actedAt: new Date(), comment: reason },
+        {
+          status: ApprovalStatus.REJECTED,
+          actedById: actor.id,
+          actedAt: new Date(),
+          comment: reason,
+        },
         { transaction: t },
       );
 
       return this.transition(
-        expense, ExpenseStatus.REJECTED, actor, t,
+        expense,
+        ExpenseStatus.REJECTED,
+        actor,
+        t,
         { rejectionReason: reason },
         reason,
       );

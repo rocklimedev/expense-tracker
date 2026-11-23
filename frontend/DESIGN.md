@@ -19,3 +19,19 @@
 ## Run
     npm install
     npm run dev
+
+## Usability pass (round 2)
+- **Dates are local.** `todayIso()` used UTC, so between midnight and 05:30 IST the default date, the "Today" shortcut and the date limit were one day behind. All screens now use local calendar dates through `toIsoDate`, `todayIso` and `daysAgoIso`.
+- **Labels are linked to their fields.** `Field` ties its label to the control with `htmlFor`, so clicking the label focuses the field and screen readers read the label. Pass `htmlFor` when the control sits inside a wrapper.
+- **Keyboard access to claims.** Rows in the expenses table can be reached with Tab and opened with Enter or Space.
+- **Phone shortcut for new claims.** A floating "New expense" button sits above the tab bar on phones, because the header button scrolls out of view.
+- **Back button on the new-claim form** returns to the previous screen inside the app, and falls back to the expenses list when the page was opened directly.
+- **Receipts.** Removing a receipt asks for confirmation. The upload area shows a focus ring for keyboard users. Opened receipts free their temporary URL after a minute.
+- **Login.** The password field has a show/hide toggle.
+
+## Round 3: spending first, not pipeline
+The app had been laid out like a sales CRM: status tabs, stat tiles and tables of records. It now reads as a personal finance tool.
+- **Expenses is a spending overview.** The top card shows what was spent this month, the change from last month, a six-month bar chart, and the amounts awaiting approval and waiting to be reimbursed. "Where it went" shows the category split as a stacked bar with a ranked list. Claims are a transaction feed grouped by day, with Today and Yesterday headings and a day total.
+- **A claim is a receipt.** The amount sits on a paper-style card with line items, a dashed tear line and a payment bar. The title is what the money was for.
+- **Navigation uses money words.** Trackers are now Budgets, Approvals is To approve, Payments is Reimbursements, Policies is Approval rules, and Users is Team. The sidebar is dark and has a New expense button.
+- **Categories have colours.** Each category has a solid bar colour for the breakdown, alongside its icon.

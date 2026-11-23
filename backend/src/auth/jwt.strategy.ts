@@ -3,14 +3,17 @@ import { ConfigService } from '@nestjs/config';
 import { PassportStrategy } from '@nestjs/passport';
 import { isUUID } from 'class-validator';
 import { ExtractJwt, Strategy } from 'passport-jwt';
-import { Role } from '../users/models/role.model';
+import { Role } from '../rbac/models/role.model';
 import { User } from '../users/models/user.model';
 import { AuthUser } from '../common/types';
-import { Permission } from '../common/permissions';
+import { RbacService } from '../rbac/rbac.service';
 
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy) {
-  constructor(config: ConfigService) {
+  constructor(
+    config: ConfigService,
+    private readonly rbac: RbacService,
+  ) {
     super({
       jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
       secretOrKey: config.getOrThrow<string>('JWT_SECRET'),
@@ -28,7 +31,8 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
       id: user.id,
       name: user.name,
       role: user.role.name,
-      permissions: user.role.permissions as Permission[],
+      roleId: user.roleId,
+      permissions: await this.rbac.getRolePermissions(user.roleId),
     };
   }
 }
