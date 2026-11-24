@@ -50,8 +50,9 @@ serves the frontend.
 
 2. Copy `compose.yaml` and the root `.env.example` to `~/expense-tracker` on the VPS.
    Rename `.env.example` to `.env` and run `chmod 600 .env`. Set `APP_SITE` to your API
-   hostname, such as `api.expenses.example.com`. Set `FRONTEND_ORIGIN` to the exact Vercel
-   production origin with its scheme and without a trailing slash. Set `DB_HOST`,
+   hostname, such as `api.expenses.example.com`. The backend allows requests from
+   `https://expense-tracker.spsyndicate.net` and optionally one additional origin via `FRONTEND_ORIGIN`.
+   Set `DB_HOST`,
    `DB_PORT`, `DB_NAME`, `DB_USER`, and `DB_PASS` for the second server and generate a
    separate random `JWT_SECRET`.
 
@@ -97,8 +98,7 @@ serves the frontend.
 6. In Vercel, connect the repository, set the root directory to `frontend`, and use the Vite
    preset, then deploy. Production builds default to `https://expense-api.spsyndicate.net`.
    If `VITE_API_URL` is already set in Vercel, update it to that URL or remove it to use the default.
-   Use the same production frontend
-   origin in the VPS's `FRONTEND_ORIGIN`. The Vercel configuration supports direct links
+   The Vercel configuration supports direct links
    such as `/profile`. [Vite on Vercel](https://vercel.com/docs/frameworks/frontend/vite)
 
 7. Set the repository variables `VPS_HOST`, `VPS_USER`, and optionally `VPS_PORT` (default
