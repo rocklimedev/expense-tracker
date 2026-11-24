@@ -27,7 +27,8 @@ jobs:
       backend: ${{ steps.images.outputs.backend }}
 
     steps:
-      - uses: actions/checkout@v6
+      - name: Checkout repository
+        uses: actions/checkout@v6
         with:
           persist-credentials: false
 
@@ -35,6 +36,8 @@ jobs:
         env:
           GHCR_TOKEN: ${{ secrets.GHCR_TOKEN }}
         run: |
+          set -euo pipefail
+
           printf '%s' "$GHCR_TOKEN" | docker login ghcr.io \
             --username "$GITHUB_ACTOR" \
             --password-stdin
@@ -42,6 +45,8 @@ jobs:
       - name: Build and publish backend
         id: images
         run: |
+          set -euo pipefail
+
           image="ghcr.io/${GITHUB_REPOSITORY,,}-backend"
           metadata="$RUNNER_TEMP/backend-build.json"
 
@@ -58,6 +63,10 @@ jobs:
 
           echo "backend=$image@$digest" >> "$GITHUB_OUTPUT"
 
+          echo "Backend image published successfully."
+          echo "Image: $image"
+          echo "Digest: $digest"
+
   deploy:
     needs: publish
 
@@ -71,7 +80,8 @@ jobs:
       contents: read
 
     steps:
-      - uses: actions/checkout@v6
+      - name: Checkout repository
+        uses: actions/checkout@v6
         with:
           persist-credentials: false
 
@@ -85,12 +95,16 @@ jobs:
           BACKEND_IMAGE: ${{ needs.publish.outputs.backend }}
 
         run: |
+          set -euo pipefail
           umask 077
+
+          echo "Preparing SSH authentication..."
 
           ssh_dir=$(mktemp -d)
           trap 'rm -rf "$ssh_dir"' EXIT
 
           printf '%s\n' "$VPS_SSH_KEY" > "$ssh_dir/key"
+          chmod 600 "$ssh_dir/key"
 
           ssh_options=(
             -p "$VPS_PORT"
@@ -98,18 +112,40 @@ jobs:
             -o IdentitiesOnly=yes
             -o BatchMode=yes
             -o ConnectTimeout=15
+            -o StrictHostKeyChecking=yes
+          )
+
+          scp_options=(
+            -P "$VPS_PORT"
+            -i "$ssh_dir/key"
+            -o IdentitiesOnly=yes
+            -o BatchMode=yes
+            -o ConnectTimeout=15
+            -o StrictHostKeyChecking=yes
           )
 
           target="$VPS_USER@$VPS_HOST"
           APP_DIR="/opt/apps/expense-tracker-api"
 
-          # Upload Compose file
-          scp "${ssh_options[@]}" \
+          echo "Verifying VPS SSH connection..."
+
+          ssh "${ssh_options[@]}" "$target" \
+            "echo 'VPS SSH connection successful.'"
+
+          echo "Uploading Compose configuration..."
+
+          scp "${scp_options[@]}" \
             compose.yaml \
             "$target:$APP_DIR/compose.yaml"
 
-          # Deploy backend
+          echo "Pulling backend image and deploying..."
+
           ssh "${ssh_options[@]}" "$target" \
             "cd '$APP_DIR' && BACKEND_IMAGE='$BACKEND_IMAGE' docker compose pull && BACKEND_IMAGE='$BACKEND_IMAGE' docker compose up -d --wait --wait-timeout 180"
+
+          echo "Verifying deployed containers..."
+
+          ssh "${ssh_options[@]}" "$target" \
+            "cd '$APP_DIR' && docker compose ps"
 
           echo "Expense Tracker deployed successfully."
