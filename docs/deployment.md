@@ -95,8 +95,9 @@ serves the frontend.
    ```
 
 6. In Vercel, connect the repository, set the root directory to `frontend`, and use the Vite
-   preset. Set the production variable `VITE_API_URL=https://api.expenses.example.com/api`
-   to your API URL without a trailing slash, then deploy. Use the same production frontend
+   preset, then deploy. Production builds default to `https://expense-api.spsyndicate.net`.
+   If `VITE_API_URL` is already set in Vercel, update it to that URL or remove it to use the default.
+   Use the same production frontend
    origin in the VPS's `FRONTEND_ORIGIN`. The Vercel configuration supports direct links
    such as `/profile`. [Vite on Vercel](https://vercel.com/docs/frameworks/frontend/vite)
 

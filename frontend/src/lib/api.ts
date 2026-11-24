@@ -1,4 +1,7 @@
-const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+const DEFAULT_API_URL = import.meta.env.PROD
+  ? 'https://expense-api.spsyndicate.net'
+  : 'http://localhost:3000';
+const BASE_URL = (import.meta.env.VITE_API_URL || DEFAULT_API_URL).replace(/\/+$/, '');
 const TOKEN_KEY = 'expense_token';
 
 export const tokenStore = {
