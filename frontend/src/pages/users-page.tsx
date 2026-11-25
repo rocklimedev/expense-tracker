@@ -1,6 +1,6 @@
-import { useState, type FormEvent } from 'react';
-import { api } from '@/lib/api';
-import { useFetch } from '@/lib/use-fetch';
+import { useRef, useState, type FormEvent } from 'react';
+import { useAuth } from '@/context/auth-context';
+import { useApiQuery, writeApi } from '@/lib/api-query';
 import { label } from '@/lib/format';
 import type { AppUser } from '@/lib/types';
 import { Button } from '@/components/ui/button';
@@ -21,28 +21,64 @@ import { PageHeader } from '@/components/common/page-header';
 import { StatusBadge } from '@/components/common/status-badge';
 
 export default function UsersPage() {
-  const { data, error, reload } = useFetch<AppUser[]>('/users');
+  const { user } = useAuth();
+  const { data, error } = useApiQuery<AppUser[]>('/users');
   const { data: roles, error: rolesError } =
-    useFetch<NonNullable<AppUser['role']>[]>('/users/roles');
+    useApiQuery<NonNullable<AppUser['role']>[]>('/users/roles');
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [selectedRoleId, setRoleId] = useState('');
+  const [editing, setEditing] = useState<AppUser | null>(null);
+  const form = useRef<HTMLFormElement>(null);
   const roleId = selectedRoleId || roles?.find((role) => role.name === 'EMPLOYEE')?.id || '';
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<{ kind: 'ok' | 'error'; text: string } | null>(null);
 
-  async function onCreate(e: FormEvent) {
+  function resetForm() {
+    setEditing(null);
+    setName('');
+    setEmail('');
+    setPassword('');
+    setRoleId('');
+  }
+
+  function edit(member: AppUser) {
+    setEditing(member);
+    setName(member.name);
+    setEmail(member.email);
+    setRoleId(member.role?.id ?? '');
+    setPassword('');
+    setMessage(null);
+    form.current?.scrollIntoView({ block: 'nearest' });
+  }
+
+  async function remove(member: AppUser) {
+    if (!window.confirm(`Delete the account for ${member.name}? They will lose access. Expense and approval history will be kept.`)) return;
+    setBusy(true);
+    setMessage(null);
+    try {
+      await writeApi(`/users/${member.id}`, { method: 'DELETE' });
+      if (editing?.id === member.id) resetForm();
+      setMessage({ kind: 'ok', text: `${member.name}’s account was deleted.` });
+    } catch (err) {
+      setMessage({ kind: 'error', text: (err as Error).message });
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function save(e: FormEvent) {
     e.preventDefault();
     setBusy(true);
     setMessage(null);
     try {
-      await api('/users', { method: 'POST', json: { name, email, password, roleId } });
-      setMessage({ kind: 'ok', text: `User ${email} created.` });
-      setName('');
-      setEmail('');
-      setPassword('');
-      reload();
+      await writeApi(editing ? `/users/${editing.id}` : '/users', {
+        method: editing ? 'PATCH' : 'POST',
+        json: { name: name.trim(), email: email.trim(), password: password || undefined, roleId },
+      });
+      setMessage({ kind: 'ok', text: editing ? `Updated ${email}.` : `Created ${email}.` });
+      resetForm();
     } catch (err) {
       setMessage({ kind: 'error', text: (err as Error).message });
     } finally {
@@ -52,7 +88,7 @@ export default function UsersPage() {
 
   return (
     <>
-      <PageHeader title="Team" description="Create accounts and assign roles." />
+      <PageHeader title="Team" description="Manage user accounts and roles." />
 
       {error && (
         <div className="mb-4">
@@ -78,6 +114,7 @@ export default function UsersPage() {
                   <TableHead>Email</TableHead>
                   <TableHead>Role</TableHead>
                   <TableHead>State</TableHead>
+                  <TableHead>Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -89,6 +126,20 @@ export default function UsersPage() {
                     <TableCell>
                       <StatusBadge status={u.isActive ? 'ACTIVE' : 'CLOSED'} />
                     </TableCell>
+                    <TableCell>
+                      {u.isActive && roles?.some((role) => role.id === u.role?.id) && (
+                        <div className="flex gap-1">
+                          <Button size="sm" variant="ghost" disabled={busy} aria-label={`Edit ${u.name}`} onClick={() => edit(u)}>
+                            Edit
+                          </Button>
+                          {u.id !== user?.id && (
+                            <Button size="sm" variant="ghost" className="text-destructive" disabled={busy} aria-label={`Delete ${u.name}`} onClick={() => void remove(u)}>
+                              Delete
+                            </Button>
+                          )}
+                        </div>
+                      )}
+                    </TableCell>
                   </TableRow>
                 ))}
               </TableBody>
@@ -97,15 +148,16 @@ export default function UsersPage() {
         </Card>
 
         <Card>
-          <form onSubmit={onCreate}>
+          <form ref={form} onSubmit={save}>
             <CardHeader>
-              <CardTitle>New user</CardTitle>
+              <CardTitle>{editing ? 'Edit user' : 'New user'}</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
               <Field label="Name">
                 <Input
                   required
                   minLength={2}
+                  maxLength={120}
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                 />
@@ -114,21 +166,24 @@ export default function UsersPage() {
                 <Input
                   type="email"
                   required
+                  maxLength={190}
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                 />
               </Field>
-              <Field label="Password (min 8 characters)">
+              <Field label={editing ? 'New password (optional)' : 'Password (min 8 characters)'}>
                 <Input
                   type="password"
-                  required
+                  required={!editing}
                   minLength={8}
+                  maxLength={72}
+                  autoComplete="new-password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                 />
               </Field>
               <Field label="Role">
-                <Select required value={roleId} onChange={(e) => setRoleId(e.target.value)}>
+                <Select required disabled={editing?.id === user?.id} value={roleId} onChange={(e) => setRoleId(e.target.value)}>
                   <option value="" disabled>
                     Select a role
                   </option>
@@ -141,10 +196,11 @@ export default function UsersPage() {
               </Field>
               {rolesError && <Notice kind="error">{rolesError}</Notice>}
             </CardContent>
-            <CardFooter>
-              <Button type="submit" className="w-full" disabled={busy || !roleId}>
-                {busy ? 'Creating…' : 'Create user'}
+            <CardFooter className="gap-2">
+              <Button type="submit" className="flex-1" disabled={busy || !roleId}>
+                {busy ? 'Saving…' : editing ? 'Save changes' : 'Create user'}
               </Button>
+              {editing && <Button type="button" variant="outline" disabled={busy} onClick={resetForm}>Cancel</Button>}
             </CardFooter>
           </form>
         </Card>

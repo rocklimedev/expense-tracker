@@ -1,8 +1,7 @@
 import { useState, type FormEvent } from 'react';
 import { Link } from 'react-router-dom';
 import { Plus } from 'lucide-react';
-import { api } from '@/lib/api';
-import { useFetch } from '@/lib/use-fetch';
+import { useApiQuery, writeApi } from '@/lib/api-query';
 import { useAuth } from '@/context/auth-context';
 import { money, formatDate } from '@/lib/format';
 import type { Tracker } from '@/lib/types';
@@ -25,7 +24,7 @@ import { StatusBadge } from '@/components/common/status-badge';
 
 export default function TrackersPage() {
   const { can } = useAuth();
-  const { data, error, reload } = useFetch<Tracker[]>('/trackers');
+  const { data, error } = useApiQuery<Tracker[]>('/trackers');
   const [showForm, setShowForm] = useState(false);
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
@@ -40,7 +39,7 @@ export default function TrackersPage() {
     setBusy(true);
     setFormError(null);
     try {
-      await api('/trackers', {
+      await writeApi('/trackers', {
         method: 'POST',
         json: {
           title,
@@ -56,7 +55,6 @@ export default function TrackersPage() {
       setStartDate('');
       setEndDate('');
       setBudget('');
-      reload();
     } catch (err) {
       setFormError((err as Error).message);
     } finally {

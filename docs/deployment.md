@@ -2,9 +2,16 @@
 
 The workflow builds two Linux AMD64 images in GHCR. The VPS runs the NestJS API and Caddy.
 Caddy terminates HTTPS and proxies `/api` to NestJS, including authenticated attachment
-downloads. API responses carry `Cache-Control: private, no-store`. Receipts and Caddy's
-certificates use persistent VPS volumes. MySQL runs on your database server and Vercel
+downloads. API responses carry `Cache-Control: private, no-store`. Receipts are stored
+over SFTP on the server behind [the media hostname](https://media-expense-tracker.spsyndicate.net/receipts).
+MySQL runs on your database server and Vercel
 serves the frontend.
+
+The backend uses SFTP in development and production. Compose sets the base path so receipt keys go under
+`/receipts/YYYY/MM/` as seen by the SFTP account. Set `SFTP_HOST`, `SFTP_PORT`,
+`SFTP_USER` and `SFTP_PRIVATE_KEY` in the VPS backend environment. The SFTP account's
+root must map `/receipts` to the intended receipt directory. The browser uses authenticated
+API endpoints for both uploading and downloading receipts.
 
 ## Configure SSH and GHCR
 
@@ -81,9 +88,9 @@ serves the frontend.
    ```
 
    For an **existing database**, apply any pending SQL migrations on the database server in
-   order before starting the new backend. If the old backend used
-   SFTP, copy its private attachment directory into the `receipt_data` volume, keeping files
-   under their original relative storage keys and readable by the container's `node` user.
+   order before starting the new backend. If the old backend used local storage, copy its
+   receipt files into the SFTP receipt directory before switching. Preserve the
+   `YYYY/MM/filename` paths under `/receipts` so existing attachment records continue to work.
    [Backend migration instructions](../backend/README.md)
 
 5. Start the stack. Caddy obtains the API certificate automatically

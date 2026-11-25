@@ -15,7 +15,7 @@ import {
 import { useAuth } from '@/context/auth-context';
 import { formatDate, label, money } from '@/lib/format';
 import type { Expense, Payment } from '@/lib/types';
-import { useFetch } from '@/lib/use-fetch';
+import { useApiQuery } from '@/lib/api-query';
 
 type ApprovedExpense = Pick<
   Expense,
@@ -38,7 +38,7 @@ export default function ProfilePage() {
     data: expenses,
     error,
     reload,
-  } = useFetch<ApprovedExpense[]>(canViewExpenses ? '/expenses/mine/approved' : null);
+  } = useApiQuery<ApprovedExpense[]>(canViewExpenses ? '/expenses/mine/approved' : null);
   const payments = (expenses ?? [])
     .flatMap((expense) => expense.payments.map((payment) => ({ expense, payment })))
     .sort(

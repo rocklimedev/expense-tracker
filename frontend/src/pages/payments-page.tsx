@@ -1,6 +1,5 @@
 import { useMemo, useState, type FormEvent } from 'react';
-import { api } from '@/lib/api';
-import { useFetch } from '@/lib/use-fetch';
+import { useApiQuery, writeApi } from '@/lib/api-query';
 import { money, formatDate, todayIso, label } from '@/lib/format';
 import type { Expense } from '@/lib/types';
 import { Button } from '@/components/ui/button';
@@ -28,8 +27,8 @@ import { PageHeader } from '@/components/common/page-header';
 import { StatusBadge } from '@/components/common/status-badge';
 
 export default function PaymentsPage() {
-  const approved = useFetch<Expense[]>('/expenses?status=APPROVED');
-  const partial = useFetch<Expense[]>('/expenses?status=PARTIALLY_PAID');
+  const approved = useApiQuery<Expense[]>('/expenses?status=APPROVED');
+  const partial = useApiQuery<Expense[]>('/expenses?status=PARTIALLY_PAID');
   const open = useMemo(
     () => [...(approved.data ?? []), ...(partial.data ?? [])],
     [approved.data, partial.data],
@@ -45,17 +44,12 @@ export default function PaymentsPage() {
   const selected = open.find((e) => e.id === expenseId);
   const remaining = selected ? Number(selected.amount) - Number(selected.paidAmount) : 0;
 
-  const reloadAll = () => {
-    approved.reload();
-    partial.reload();
-  };
-
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
     setBusy(true);
     setMessage(null);
     try {
-      const res = await api<{ expenseStatus: string; paidAmount: number }>(
+      const res = await writeApi<{ expenseStatus: string; paidAmount: number }>(
         `/expenses/${expenseId}/payments`,
         {
           method: 'POST',
@@ -65,7 +59,6 @@ export default function PaymentsPage() {
       setMessage({ kind: 'ok', text: `Payment recorded. Status: ${label(res.expenseStatus)}.` });
       setAmount('');
       setReference('');
-      reloadAll();
     } catch (err) {
       setMessage({ kind: 'error', text: (err as Error).message });
     } finally {

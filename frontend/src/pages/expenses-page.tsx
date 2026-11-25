@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Plus, Search, TrendingDown, TrendingUp } from 'lucide-react';
 import { useAuth } from '@/context/auth-context';
-import { useFetch } from '@/lib/use-fetch';
+import { useApiQuery } from '@/lib/api-query';
 import { money, label } from '@/lib/format';
 import {
   categoryTotals,
@@ -70,7 +70,7 @@ function Metric({
 export default function ExpensesPage() {
   const { user, can } = useAuth();
   const navigate = useNavigate();
-  const { data, error, loading } = useFetch<Expense[]>('/expenses');
+  const { data, error, loading } = useApiQuery<Expense[]>('/expenses');
   const [filter, setFilter] = useState<Filter>('ALL');
   const [query, setQuery] = useState('');
 

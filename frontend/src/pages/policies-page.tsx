@@ -1,7 +1,6 @@
 import { useState, type FormEvent } from 'react';
 import { Plus, Trash2 } from 'lucide-react';
-import { api } from '@/lib/api';
-import { useFetch } from '@/lib/use-fetch';
+import { useApiQuery, writeApi } from '@/lib/api-query';
 import { money, label } from '@/lib/format';
 import { APPROVAL_PERMISSIONS } from '@/lib/constants';
 import type { ApprovalPolicy, ExpenseCategory } from '@/lib/types';
@@ -35,8 +34,8 @@ interface StepDraft {
 }
 
 export default function PoliciesPage() {
-  const { data, error, reload } = useFetch<ApprovalPolicy[]>('/approval-policies');
-  const categories = useFetch<ExpenseCategory[]>('/expense-categories');
+  const { data, error } = useApiQuery<ApprovalPolicy[]>('/approval-policies');
+  const categories = useApiQuery<ExpenseCategory[]>('/expense-categories');
   const [name, setName] = useState('');
   const [category, setCategory] = useState('');
   const [minAmount, setMinAmount] = useState('0');
@@ -55,7 +54,7 @@ export default function PoliciesPage() {
     setBusy(true);
     setMessage(null);
     try {
-      await api('/approval-policies', {
+      await writeApi('/approval-policies', {
         method: 'POST',
         json: {
           name,
@@ -71,7 +70,6 @@ export default function PoliciesPage() {
       });
       setName('');
       setSteps([{ label: 'CA review', requiredPermission: 'expense.approve' }]);
-      reload();
     } catch (err) {
       setMessage({ kind: 'error', text: (err as Error).message });
     } finally {
@@ -82,8 +80,7 @@ export default function PoliciesPage() {
   async function deactivate(id: string) {
     setMessage(null);
     try {
-      await api(`/approval-policies/${id}/deactivate`, { method: 'POST' });
-      reload();
+      await writeApi(`/approval-policies/${id}/deactivate`, { method: 'POST' });
     } catch (err) {
       setMessage({ kind: 'error', text: (err as Error).message });
     }

@@ -1,10 +1,10 @@
-import { useState, type FormEvent } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Paperclip, Plus, Send } from 'lucide-react';
-import { api } from '@/lib/api';
+import { useState, type ChangeEvent, type FormEvent } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import { ArrowLeft, Plus, Send } from 'lucide-react';
+import { MAX_RECEIPTS, RECEIPT_ACCEPT, receiptFileError, uploadReceipt } from '@/lib/receipt-upload';
 import { categoryMeta } from '@/lib/category-meta';
 import { todayIso, daysAgoIso, label, money, formatDate } from '@/lib/format';
-import { useFetch } from '@/lib/use-fetch';
+import { useApiQuery, writeApi } from '@/lib/api-query';
 import { useDebounced } from '@/lib/use-debounced';
 import type { ApprovalStep, ExpenseCategory } from '@/lib/types';
 import { cn } from '@/lib/utils';
@@ -20,7 +20,7 @@ const MAX_DESCRIPTION = 500;
 
 export default function NewExpensePage() {
   const navigate = useNavigate();
-  const categories = useFetch<ExpenseCategory[]>('/expense-categories');
+  const categories = useApiQuery<ExpenseCategory[]>('/expense-categories');
   const [selectedCategory, setCategory] = useState('');
   const category =
     selectedCategory ||
@@ -36,17 +36,21 @@ export default function NewExpensePage() {
   const [description, setDescription] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState<'draft' | 'submit' | null>(null);
+  const [draftId, setDraftId] = useState<string>();
+  const [receipts, setReceipts] = useState<File[]>([]);
+  const [uploadedCount, setUploadedCount] = useState(0);
+  const [uploading, setUploading] = useState<string>();
+  const [receiptError, setReceiptError] = useState<string>();
 
   const amountNum = Number(amount);
   const validAmount = amount !== '' && amountNum > 0;
 
   // Preview the approval route as the amount settles, without a request on every keystroke.
   const debouncedAmount = useDebounced(validAmount ? amountNum : 0, 450);
-  const { data: route, loading: routeLoading } = useFetch<ApprovalStep[]>(
+  const { data: route, loading: routeLoading } = useApiQuery<ApprovalStep[]>(
     debouncedAmount > 0 && category
       ? `/approval-policies/preview?amount=${debouncedAmount}&category=${encodeURIComponent(category)}`
       : null,
-    [debouncedAmount, category],
   );
 
   const { icon: CatIcon, tone: catTone } = categoryMeta(category);
@@ -58,14 +62,9 @@ export default function NewExpensePage() {
     setSavingCategory(true);
     setCategoryError(null);
     try {
-      const created = await api<ExpenseCategory>('/expense-categories', {
+      const created = await writeApi<ExpenseCategory>('/expense-categories', {
         method: 'POST',
         json: { name },
-      });
-      categories.setData((current) => {
-        const options = current ?? [];
-        if (options.some(({ code }) => code === created.code)) return options;
-        return [...options, created];
       });
       setCategory(created.code);
       setCategoryName('');
@@ -85,6 +84,23 @@ export default function NewExpensePage() {
     else navigate('/expenses');
   }
 
+  function selectReceipts(event: ChangeEvent<HTMLInputElement>) {
+    const selected = Array.from(event.currentTarget.files ?? []);
+    event.currentTarget.value = '';
+    if (!selected.length) return;
+    const invalid = selected.map(receiptFileError).find(Boolean);
+    if (invalid) {
+      setReceiptError(invalid);
+      return;
+    }
+    if (uploadedCount + receipts.length + selected.length > MAX_RECEIPTS) {
+      setReceiptError(`You can attach up to ${MAX_RECEIPTS} receipts per expense.`);
+      return;
+    }
+    setReceiptError(undefined);
+    setReceipts([...receipts, ...selected]);
+  }
+
   async function save(andSubmit: boolean) {
     if (!category || addingCategory || busy) return;
     if (!validAmount) {
@@ -94,31 +110,39 @@ export default function NewExpensePage() {
     setBusy(andSubmit ? 'submit' : 'draft');
     setError(null);
 
-    let id: string | undefined;
     try {
-      const created = await api<{ id: string }>('/expenses', {
-        method: 'POST',
-        json: {
-          category,
-          amount: amountNum,
-          expenseDate,
-          description: description.trim() || undefined,
-        },
-      });
-      id = created.id;
-      if (andSubmit) await api(`/expenses/${id}/submit`, { method: 'POST' });
+      let id = draftId;
+      if (!id) {
+        const created = await writeApi<{ id: string }>('/expenses', {
+          method: 'POST',
+          json: {
+            category,
+            amount: amountNum,
+            expenseDate,
+            description: description.trim() || undefined,
+          },
+        });
+        id = created.id;
+        setDraftId(id);
+      }
+
+      for (const file of receipts) {
+        setUploading(file.name);
+        try {
+          await uploadReceipt(id, file);
+        } catch (err) {
+          throw new Error(`Could not upload “${file.name}”. ${(err as Error).message}`);
+        }
+        setReceipts((remaining) => remaining.slice(1));
+        setUploadedCount((count) => count + 1);
+      }
+      setUploading(undefined);
+      if (andSubmit) await writeApi(`/expenses/${id}/submit`, { method: 'POST' });
       navigate(`/expenses/${id}`);
     } catch (err) {
-      const message = (err as Error).message;
-      if (id) {
-        // The draft exists, so send the user there and explain why it was not submitted.
-        navigate(`/expenses/${id}`, {
-          state: { notice: `Saved as a draft, but it was not submitted: ${message}` },
-        });
-      } else {
-        setError(message);
-        setBusy(null);
-      }
+      setError((err as Error).message);
+      setBusy(null);
+      setUploading(undefined);
     }
   }
 
@@ -148,184 +172,231 @@ export default function NewExpensePage() {
         <form onSubmit={onSubmit} className="lg:col-span-3">
           <Card>
             <CardContent className="space-y-8 p-6 sm:p-8">
-              {/* Amount is the first thing people look for, so it gets the most room. */}
-              <Field label="Amount" htmlFor="amount">
-                <div className="flex items-center gap-3 rounded-xl border border-input bg-background px-4 focus-within:ring-2 focus-within:ring-ring">
-                  <span className="text-2xl font-medium text-muted-foreground">₹</span>
-                  <input
-                    id="amount"
-                    type="number"
-                    inputMode="decimal"
-                    step="0.01"
-                    min="0.01"
-                    placeholder="0.00"
-                    required
-                    autoFocus
-                    aria-describedby="amount-hint"
-                    value={amount}
-                    onChange={(e) => setAmount(e.target.value)}
-                    className="h-16 w-full bg-transparent text-3xl font-semibold tabular-nums placeholder:text-muted-foreground/50 focus:outline-none"
-                  />
-                </div>
-                <p id="amount-hint" className="text-xs text-muted-foreground">
-                  Enter the total you paid, including tax.
-                </p>
-              </Field>
-
-              <fieldset className="space-y-2">
-                <legend className="text-sm font-medium">Category</legend>
-                {categories.error && (
-                  <div className="space-y-2">
-                    <Notice kind="error">{categories.error}</Notice>
-                    <Button type="button" variant="outline" size="sm" onClick={categories.reload}>
-                      Retry
-                    </Button>
+              <fieldset aria-label="Expense details" disabled={Boolean(draftId || busy)} className="min-w-0 space-y-8">
+                <Field label="Amount" htmlFor="amount">
+                  <div className="flex items-center gap-3 rounded-xl border border-input bg-background px-4 focus-within:ring-2 focus-within:ring-ring">
+                    <span className="text-2xl font-medium text-muted-foreground">₹</span>
+                    <input
+                      id="amount"
+                      type="number"
+                      inputMode="decimal"
+                      step="0.01"
+                      min="0.01"
+                      placeholder="0.00"
+                      required
+                      autoFocus
+                      aria-describedby="amount-hint"
+                      value={amount}
+                      onChange={(e) => setAmount(e.target.value)}
+                      className="h-16 w-full bg-transparent text-3xl font-semibold tabular-nums placeholder:text-muted-foreground/50 focus:outline-none"
+                    />
                   </div>
-                )}
-                {!categories.data && !categories.error && (
-                  <p role="status" className="text-sm text-muted-foreground">
-                    Loading categories…
+                  <p id="amount-hint" className="text-xs text-muted-foreground">
+                    Enter the total you paid, including tax.
                   </p>
-                )}
-                <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-                  {categories.data?.map(({ code: c }) => {
-                    const meta = categoryMeta(c);
-                    const Icon = meta.icon;
-                    const selected = c === category;
-                    return (
-                      <button
-                        key={c}
-                        type="button"
-                        aria-pressed={selected}
-                        onClick={() => setCategory(c)}
-                        className={cn(
-                          'flex min-w-0 flex-col items-start gap-3 rounded-xl border p-3 text-left text-sm font-medium transition-all',
-                          selected
-                            ? 'border-primary bg-accent text-accent-foreground ring-1 ring-primary'
-                            : 'border-input bg-card text-muted-foreground hover:border-foreground/20 hover:text-foreground',
-                        )}
-                      >
-                        <span
-                          className={cn(
-                            'flex h-8 w-8 items-center justify-center rounded-lg',
-                            meta.tone,
-                          )}
-                        >
-                          <Icon className="h-4 w-4" />
-                        </span>
-                        <span className="max-w-full break-words">{label(c)}</span>
-                      </button>
-                    );
-                  })}
-                </div>
-                {addingCategory ? (
-                  <div className="space-y-2 rounded-xl border p-3">
-                    <Field label="Category name">
-                      <Input
-                        autoFocus
-                        maxLength={60}
-                        value={categoryName}
-                        disabled={savingCategory}
-                        onChange={(event) => setCategoryName(event.target.value)}
-                        onKeyDown={(event) => {
-                          if (event.key === 'Enter') {
-                            event.preventDefault();
-                            void addCategory();
-                          }
-                        }}
-                      />
-                    </Field>
-                    {categoryError && <Notice kind="error">{categoryError}</Notice>}
-                    <div className="flex flex-wrap gap-2">
-                      <Button
-                        type="button"
-                        size="sm"
-                        onClick={addCategory}
-                        disabled={savingCategory || categoryName.trim().length < 2}
-                      >
-                        {savingCategory ? 'Adding…' : 'Add category'}
-                      </Button>
-                      <Button
-                        type="button"
-                        size="sm"
-                        variant="ghost"
-                        disabled={savingCategory}
-                        onClick={() => {
-                          setAddingCategory(false);
-                          setCategoryName('');
-                          setCategoryError(null);
-                        }}
-                      >
-                        Cancel
+                </Field>
+
+                <fieldset className="space-y-2">
+                  <legend className="text-sm font-medium">Category</legend>
+                  {categories.error && (
+                    <div className="space-y-2">
+                      <Notice kind="error">{categories.error}</Notice>
+                      <Button type="button" variant="outline" size="sm" onClick={categories.reload}>
+                        Retry
                       </Button>
                     </div>
+                  )}
+                  {!categories.data && !categories.error && (
+                    <p role="status" className="text-sm text-muted-foreground">
+                      Loading categories…
+                    </p>
+                  )}
+                  <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+                    {categories.data?.map(({ code: c }) => {
+                      const meta = categoryMeta(c);
+                      const Icon = meta.icon;
+                      const selected = c === category;
+                      return (
+                        <button
+                          key={c}
+                          type="button"
+                          aria-pressed={selected}
+                          onClick={() => setCategory(c)}
+                          className={cn(
+                            'flex min-w-0 flex-col items-start gap-3 rounded-xl border p-3 text-left text-sm font-medium transition-all',
+                            selected
+                              ? 'border-primary bg-accent text-accent-foreground ring-1 ring-primary'
+                              : 'border-input bg-card text-muted-foreground hover:border-foreground/20 hover:text-foreground',
+                          )}
+                        >
+                          <span
+                            className={cn(
+                              'flex h-8 w-8 items-center justify-center rounded-lg',
+                              meta.tone,
+                            )}
+                          >
+                            <Icon className="h-4 w-4" />
+                          </span>
+                          <span className="max-w-full break-words">{label(c)}</span>
+                        </button>
+                      );
+                    })}
                   </div>
-                ) : (
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    disabled={!categories.data || busy !== null}
-                    onClick={() => setAddingCategory(true)}
-                  >
-                    <Plus aria-hidden="true" className="h-4 w-4" /> Add category
-                  </Button>
-                )}
-              </fieldset>
+                  {addingCategory ? (
+                    <div className="space-y-2 rounded-xl border p-3">
+                      <Field label="Category name">
+                        <Input
+                          autoFocus
+                          maxLength={60}
+                          value={categoryName}
+                          disabled={savingCategory}
+                          onChange={(event) => setCategoryName(event.target.value)}
+                          onKeyDown={(event) => {
+                            if (event.key === 'Enter') {
+                              event.preventDefault();
+                              void addCategory();
+                            }
+                          }}
+                        />
+                      </Field>
+                      {categoryError && <Notice kind="error">{categoryError}</Notice>}
+                      <div className="flex flex-wrap gap-2">
+                        <Button
+                          type="button"
+                          size="sm"
+                          onClick={addCategory}
+                          disabled={savingCategory || categoryName.trim().length < 2}
+                        >
+                          {savingCategory ? 'Adding…' : 'Add category'}
+                        </Button>
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="ghost"
+                          disabled={savingCategory}
+                          onClick={() => {
+                            setAddingCategory(false);
+                            setCategoryName('');
+                            setCategoryError(null);
+                          }}
+                        >
+                          Cancel
+                        </Button>
+                      </div>
+                    </div>
+                  ) : (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      disabled={!categories.data || busy !== null}
+                      onClick={() => setAddingCategory(true)}
+                    >
+                      <Plus aria-hidden="true" className="h-4 w-4" /> Add category
+                    </Button>
+                  )}
+                </fieldset>
 
-              <div className="grid gap-6 sm:grid-cols-2">
-                <Field label="Date">
-                  <Input
-                    type="date"
-                    required
-                    max={todayIso()}
-                    className="h-11"
-                    value={expenseDate}
-                    onChange={(e) => setExpenseDate(e.target.value)}
+                <div className="grid gap-6 sm:grid-cols-2">
+                  <Field label="Date">
+                    <Input
+                      type="date"
+                      required
+                      max={todayIso()}
+                      className="h-11"
+                      value={expenseDate}
+                      onChange={(e) => setExpenseDate(e.target.value)}
+                    />
+                    <div className="flex gap-2 pt-1">
+                      {[
+                        { label: 'Today', value: todayIso() },
+                        { label: 'Yesterday', value: daysAgoIso(1) },
+                      ].map((opt) => (
+                        <button
+                          key={opt.label}
+                          type="button"
+                          onClick={() => setExpenseDate(opt.value)}
+                          className={cn(
+                            'rounded-full border px-3 py-1 text-xs font-medium transition-colors',
+                            expenseDate === opt.value
+                              ? 'border-primary bg-accent text-accent-foreground'
+                              : 'text-muted-foreground hover:bg-muted',
+                          )}
+                        >
+                          {opt.label}
+                        </button>
+                      ))}
+                    </div>
+                  </Field>
+                </div>
+
+                <Field label="Description">
+                  <Textarea
+                    placeholder="What was it for? e.g. Client lunch with Acme team"
+                    maxLength={MAX_DESCRIPTION}
+                    rows={3}
+                    value={description}
+                    onChange={(e) => setDescription(e.target.value)}
                   />
-                  <div className="flex gap-2 pt-1">
-                    {[
-                      { label: 'Today', value: todayIso() },
-                      { label: 'Yesterday', value: daysAgoIso(1) },
-                    ].map((opt) => (
-                      <button
-                        key={opt.label}
-                        type="button"
-                        onClick={() => setExpenseDate(opt.value)}
-                        className={cn(
-                          'rounded-full border px-3 py-1 text-xs font-medium transition-colors',
-                          expenseDate === opt.value
-                            ? 'border-primary bg-accent text-accent-foreground'
-                            : 'text-muted-foreground hover:bg-muted',
-                        )}
-                      >
-                        {opt.label}
-                      </button>
-                    ))}
+                  <div className="text-right text-xs tabular-nums text-muted-foreground">
+                    {description.length}/{MAX_DESCRIPTION}
                   </div>
                 </Field>
-              </div>
+              </fieldset>
 
-              <Field label="Description">
-                <Textarea
-                  placeholder="What was it for? e.g. Client lunch with Acme team"
-                  maxLength={MAX_DESCRIPTION}
-                  rows={3}
-                  value={description}
-                  onChange={(e) => setDescription(e.target.value)}
+              <Field label="Receipts (optional)" htmlFor="expense-receipts">
+                <Input
+                  id="expense-receipts"
+                  type="file"
+                  multiple
+                  accept={RECEIPT_ACCEPT}
+                  aria-describedby="receipt-hint"
+                  disabled={busy !== null || uploadedCount + receipts.length >= MAX_RECEIPTS}
+                  onChange={selectReceipts}
                 />
-                <div className="text-right text-xs tabular-nums text-muted-foreground">
-                  {description.length}/{MAX_DESCRIPTION}
-                </div>
+                <p id="receipt-hint" className="text-xs text-muted-foreground">
+                  JPEG, PNG, WEBP or PDF · under 5 MB each · up to {MAX_RECEIPTS} files
+                </p>
+                {receipts.length > 0 && (
+                  <ul className="space-y-1">
+                    {receipts.map((file, index) => (
+                      <li key={index} className="flex items-center justify-between gap-2">
+                        <span className="min-w-0 break-all text-sm">{file.name}</span>
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="ghost"
+                          aria-label={`Remove ${file.name}`}
+                          disabled={busy !== null}
+                          onClick={() => {
+                            setReceipts((files) => files.filter((_, i) => i !== index));
+                            setReceiptError(undefined);
+                          }}
+                        >
+                          Remove
+                        </Button>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+                {(uploading || uploadedCount > 0) && (
+                  <p role="status" className="text-sm text-muted-foreground">
+                    {uploading ? `Uploading ${uploading}…` : `${uploadedCount} uploaded`}
+                  </p>
+                )}
+                {receiptError && <Notice kind="error">{receiptError}</Notice>}
               </Field>
 
               {error && <Notice kind="error">{error}</Notice>}
+              {draftId && !busy && (
+                <p className="text-sm text-muted-foreground">
+                  Your draft is saved. Retry here or{' '}
+                  <Link className="underline" to={`/expenses/${draftId}`}>open the draft</Link>.
+                </p>
+              )}
             </CardContent>
 
-            <CardFooter className="flex-col-reverse gap-3 border-t bg-muted/30 p-6 sm:flex-row sm:justify-between">
-              <p className="flex items-center gap-2 text-xs text-muted-foreground">
-                <Paperclip className="h-3.5 w-3.5" /> You can attach receipts after saving.
-              </p>
+            <CardFooter className="justify-end border-t bg-muted/30 p-6">
               <div className="flex w-full flex-col-reverse gap-2 sm:w-auto sm:flex-row">
                 <Button
                   type="submit"

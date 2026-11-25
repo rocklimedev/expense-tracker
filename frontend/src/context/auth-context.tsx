@@ -4,10 +4,13 @@ import {
   useContext,
   useEffect,
   useMemo,
-  useState,
   type ReactNode,
 } from 'react';
-import { api, tokenStore } from '@/lib/api';
+import { useDispatch, useSelector } from 'react-redux';
+import type { FetchBaseQueryError } from '@reduxjs/toolkit/query';
+import { tokenStore } from '@/lib/api';
+import { requestMessage, serverApi } from '@/lib/server-api';
+import { setSignedIn, type AppDispatch, type RootState } from '@/lib/store';
 import type { Me } from '@/lib/types';
 
 interface AuthState {
@@ -22,39 +25,44 @@ interface AuthState {
 const AuthContext = createContext<AuthState | null>(null);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<Me | null>(null);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    if (!tokenStore.get()) {
-      setLoading(false);
-      return;
-    }
-    api<Me>('/auth/me')
-      .then(setUser)
-      .catch(() => tokenStore.clear())
-      .finally(() => setLoading(false));
-  }, []);
+  const dispatch = useDispatch<AppDispatch>();
+  const signedIn = useSelector((state: RootState) => state.session.signedIn);
+  const session = serverApi.useCurrentUserQuery(undefined, { skip: !signedIn });
+  const user = session.currentData ?? null;
+  const loading = signedIn && !user && !session.isError;
 
   const login = useCallback(async (email: string, password: string) => {
-    const res = await api<{ accessToken: string }>('/auth/login', {
-      method: 'POST',
-      json: { email, password },
-    });
-    tokenStore.set(res.accessToken);
-    setUser(await api<Me>('/auth/me'));
-  }, []);
+    try {
+      const { accessToken } = await dispatch(
+        serverApi.endpoints.login.initiate({ email, password }, { track: false }),
+      ).unwrap();
+      tokenStore.set(accessToken);
+      await dispatch(
+        serverApi.endpoints.currentUser.initiate(undefined, { subscribe: false, forceRefetch: true }),
+      ).unwrap();
+      dispatch(setSignedIn(true));
+    } catch (error) {
+      tokenStore.clear();
+      dispatch(serverApi.util.resetApiState());
+      throw new Error(requestMessage(error as FetchBaseQueryError));
+    }
+  }, [dispatch]);
 
   const logout = useCallback(() => {
     tokenStore.clear();
-    setUser(null);
-  }, []);
+    dispatch(setSignedIn(false));
+    dispatch(serverApi.util.resetApiState());
+  }, [dispatch]);
+
+  useEffect(() => {
+    if (signedIn && session.isError && !user) logout();
+  }, [signedIn, session.isError, user, logout]);
 
   const refreshPermissions = useCallback(async () => {
-    const token = tokenStore.get();
-    const currentUser = await api<Me>('/auth/me');
-    if (tokenStore.get() === token) setUser(currentUser);
-  }, []);
+    await dispatch(
+      serverApi.endpoints.currentUser.initiate(undefined, { subscribe: false, forceRefetch: true }),
+    ).unwrap();
+  }, [dispatch]);
 
   const value = useMemo<AuthState>(
     () => ({

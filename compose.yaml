@@ -5,8 +5,9 @@ services:
     image: ${BACKEND_IMAGE:?Set BACKEND_IMAGE in .env}
     restart: unless-stopped
     env_file: .env
-    volumes:
-      - /opt/media-expense-tracker/receipts:/opt/expense-tracker/receipts
+    environment:
+      # Receipt storage keys already start with receipts/.
+      SFTP_BASE_PATH: /
     expose:
       - '3000'
     healthcheck:

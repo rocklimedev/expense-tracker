@@ -1,8 +1,7 @@
 import { useState, type FormEvent } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { Eye, RefreshCw, Send } from 'lucide-react';
-import { api } from '@/lib/api';
-import { useFetch } from '@/lib/use-fetch';
+import { useApiQuery, writeApi } from '@/lib/api-query';
 import { useAuth } from '@/context/auth-context';
 import { money, formatDate, todayIso, label } from '@/lib/format';
 import { FREQUENCIES } from '@/lib/constants';
@@ -36,11 +35,11 @@ export default function TrackerDetailPage() {
   const { id: trackerId } = useParams();
   const { user } = useAuth();
 
-  const tracker = useFetch<Tracker>(`/trackers/${trackerId}`, [trackerId]);
-  const summary = useFetch<TrackerSummary>(`/trackers/${trackerId}/summary`, [trackerId]);
-  const schedules = useFetch<TrackerSchedule[]>(`/trackers/${trackerId}/schedules`, [trackerId]);
-  const expenses = useFetch<Expense[]>(`/trackers/${trackerId}/expenses`, [trackerId]);
-  const categories = useFetch<ExpenseCategory[]>('/expense-categories');
+  const tracker = useApiQuery<Tracker>(`/trackers/${trackerId}`);
+  const summary = useApiQuery<TrackerSummary>(`/trackers/${trackerId}/summary`);
+  const schedules = useApiQuery<TrackerSchedule[]>(`/trackers/${trackerId}/schedules`);
+  const expenses = useApiQuery<Expense[]>(`/trackers/${trackerId}/expenses`);
+  const categories = useApiQuery<ExpenseCategory[]>('/expense-categories');
   const defaultCategory =
     categories.data?.find(({ code }) => code === 'TRAVEL')?.code ??
     categories.data?.[0]?.code ??
@@ -74,20 +73,12 @@ export default function TrackerDetailPage() {
   const closed = t.status === 'CLOSED';
   const s = summary.data;
 
-  const refreshAll = () => {
-    tracker.reload();
-    summary.reload();
-    schedules.reload();
-    expenses.reload();
-  };
-
   async function run(action: () => Promise<unknown>, successText: string) {
     setBusy(true);
     setFeedback(null);
     try {
       await action();
       setFeedback({ kind: 'ok', text: successText });
-      refreshAll();
     } catch (err) {
       setFeedback({ kind: 'error', text: (err as Error).message });
     } finally {
@@ -99,7 +90,7 @@ export default function TrackerDetailPage() {
     e.preventDefault();
     await run(
       () =>
-        api(`/trackers/${trackerId}/schedules`, {
+        writeApi(`/trackers/${trackerId}/schedules`, {
           method: 'POST',
           json: {
             frequency,
@@ -122,7 +113,7 @@ export default function TrackerDetailPage() {
     e.preventDefault();
     await run(
       () =>
-        api(`/trackers/${trackerId}/expenses`, {
+        writeApi(`/trackers/${trackerId}/expenses`, {
           method: 'POST',
           json: {
             category: expCategory,
@@ -141,7 +132,7 @@ export default function TrackerDetailPage() {
     setBusy(true);
     setFeedback(null);
     try {
-      const res = await api<{ count: number; total: number; hasMore: boolean }>(
+      const res = await writeApi<{ count: number; total: number; hasMore: boolean }>(
         `/trackers/${trackerId}/submit-drafts`,
         { method: 'POST', json: { dryRun: true } },
       );
@@ -171,7 +162,7 @@ export default function TrackerDetailPage() {
                   disabled={busy}
                   onClick={() =>
                     run(
-                      () => api(`/trackers/${trackerId}/generate`, { method: 'POST' }),
+                      () => writeApi(`/trackers/${trackerId}/generate`, { method: 'POST' }),
                       'Due drafts generated',
                     )
                   }
@@ -186,7 +177,7 @@ export default function TrackerDetailPage() {
                   onClick={() =>
                     run(
                       () =>
-                        api(`/trackers/${trackerId}/submit-drafts`, { method: 'POST', json: {} }),
+                        writeApi(`/trackers/${trackerId}/submit-drafts`, { method: 'POST', json: {} }),
                       'Drafts submitted for approval',
                     )
                   }
@@ -315,7 +306,7 @@ export default function TrackerDetailPage() {
                               onClick={() =>
                                 run(
                                   () =>
-                                    api(`/trackers/${trackerId}/schedules/${sch.id}/stop`, {
+                                    writeApi(`/trackers/${trackerId}/schedules/${sch.id}/stop`, {
                                       method: 'POST',
                                     }),
                                   'Schedule stopped',

@@ -2,8 +2,8 @@ import { useState, type ChangeEvent, type FormEvent } from 'react';
 import { Link, useLocation, useParams } from 'react-router-dom';
 import { ArrowLeft, Download, FileText, Send, Trash2, Upload } from 'lucide-react';
 import { useAuth } from '@/context/auth-context';
-import { api, openAttachment } from '@/lib/api';
-import { useFetch } from '@/lib/use-fetch';
+import { MAX_RECEIPTS, RECEIPT_ACCEPT, receiptFileError, uploadReceipt } from '@/lib/receipt-upload';
+import { openAttachment, useApiQuery, writeApi } from '@/lib/api-query';
 import { money, formatDate, formatDateTime, label } from '@/lib/format';
 import type { ApprovalStep, Attachment, Expense, Payment } from '@/lib/types';
 import { Button } from '@/components/ui/button';
@@ -19,6 +19,7 @@ import {
 } from '@/components/ui/table';
 import { Notice } from '@/components/common/notice';
 import { Receipt } from '@/components/common/receipt';
+import { ReceiptPreview } from '@/components/common/receipt-preview';
 import { StatusBadge } from '@/components/common/status-badge';
 import { CategoryTile } from '@/components/common/category-tile';
 import { ApprovalStepper } from '@/components/common/approval-stepper';
@@ -40,21 +41,18 @@ export default function ExpenseDetailPage() {
   const location = useLocation();
   const { user, can } = useAuth();
 
-  const { data: expense, error, reload } = useFetch<Expense>(`/expenses/${expenseId}`, [expenseId]);
-  const { data: attachments, reload: reloadAttachments } = useFetch<Attachment[]>(
+  const { data: expense, error } = useApiQuery<Expense>(`/expenses/${expenseId}`);
+  const { data: attachments } = useApiQuery<Attachment[]>(
     `/expenses/${expenseId}/attachments`,
-    [expenseId],
   );
-  const { data: payments, reload: reloadPayments } = useFetch<Payment[]>(
+  const { data: payments } = useApiQuery<Payment[]>(
     can('payment.record') ? `/expenses/${expenseId}/payments` : null,
-    [expenseId],
   );
   const canPreview = expense && (expense.status === 'DRAFT' || expense.status === 'REJECTED');
-  const { data: preview } = useFetch<ApprovalStep[]>(
+  const { data: preview } = useApiQuery<ApprovalStep[]>(
     canPreview
       ? `/approval-policies/preview?amount=${Number(expense.amount)}&category=${encodeURIComponent(expense.category)}`
       : null,
-    [expense?.status, expense?.amount],
   );
 
   // A notice can arrive from the new-expense page when a draft saved but could not be submitted.
@@ -72,6 +70,7 @@ export default function ExpenseDetailPage() {
 
   const isOwner = expense.employeeId === user?.id;
   const editable = isOwner && (expense.status === 'DRAFT' || expense.status === 'REJECTED');
+  const canManageReceipts = editable && can('expense.create');
   const canApprove = can('expense.approve') && !isOwner && expense.status === 'SUBMITTED';
   const canReject = can('expense.reject') && !isOwner && expense.status === 'SUBMITTED';
   const showDecision = canApprove || canReject;
@@ -93,9 +92,6 @@ export default function ExpenseDetailPage() {
     try {
       await action();
       setFeedback({ kind: 'ok', text: successText });
-      reload();
-      reloadAttachments();
-      reloadPayments();
     } catch (err) {
       setFeedback({ kind: 'error', text: (err as Error).message });
     } finally {
@@ -104,12 +100,12 @@ export default function ExpenseDetailPage() {
   }
 
   const submit = () =>
-    run(() => api(`/expenses/${expense.id}/submit`, { method: 'POST' }), 'Submitted for approval');
+    run(() => writeApi(`/expenses/${expense.id}/submit`, { method: 'POST' }), 'Submitted for approval');
 
   const approve = () =>
     run(
       () =>
-        api(`/expenses/${expense.id}/approve`, {
+        writeApi(`/expenses/${expense.id}/approve`, {
           method: 'POST',
           json: { comment: comment || undefined },
         }),
@@ -120,7 +116,7 @@ export default function ExpenseDetailPage() {
     e.preventDefault();
     run(
       () =>
-        api(`/expenses/${expense.id}/reject`, { method: 'POST', json: { reason: rejectReason } }),
+        writeApi(`/expenses/${expense.id}/reject`, { method: 'POST', json: { reason: rejectReason } }),
       'Expense rejected',
     ).then(() => {
       setShowReject(false);
@@ -129,15 +125,15 @@ export default function ExpenseDetailPage() {
   };
 
   const upload = (ev: ChangeEvent<HTMLInputElement>) => {
-    const file = ev.target.files?.[0];
+    const file = ev.currentTarget.files?.[0];
+    ev.currentTarget.value = '';
     if (!file) return;
-    const form = new FormData();
-    form.append('file', file);
-    run(
-      () => api(`/expenses/${expense.id}/attachments`, { method: 'POST', body: form }),
-      'Receipt uploaded',
-    );
-    ev.target.value = '';
+    const message = receiptFileError(file);
+    if (message) {
+      setFeedback({ kind: 'error', text: message });
+      return;
+    }
+    run(() => uploadReceipt(expense.id, file), 'Receipt uploaded');
   };
 
   const actionHint = editable
@@ -181,7 +177,7 @@ export default function ExpenseDetailPage() {
       <div className="grid gap-6 lg:grid-cols-3">
         {/* Next-step panel comes first on mobile, last-in-column on desktop. */}
         <aside className="order-first space-y-6 lg:order-last">
-          <Card className="lg:sticky lg:top-8">
+          <Card>
             <CardHeader>
               <CardTitle>Next step</CardTitle>
               <CardDescription>{actionHint}</CardDescription>
@@ -253,6 +249,93 @@ export default function ExpenseDetailPage() {
               )}
             </CardContent>
           </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Receipts</CardTitle>
+              <CardDescription>Keep a copy of every receipt with the claim.</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {attachments?.length === 0 && !canManageReceipts && (
+                <p className="text-sm text-muted-foreground">No receipts attached.</p>
+              )}
+              {attachments?.map((a) => (
+                <div key={a.id} className="overflow-hidden rounded-lg border">
+                  <div className="flex items-center gap-2 p-3">
+                    <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-muted text-muted-foreground">
+                      <FileText className="h-4 w-4" />
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <div className="truncate text-sm font-medium">{a.originalName}</div>
+                      <div className="text-xs text-muted-foreground">
+                        {Math.max(1, Math.round(a.sizeBytes / 1024))} KB
+                      </div>
+                    </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() =>
+                        openAttachment(a.id).catch((err) =>
+                          setFeedback({ kind: 'error', text: err.message }),
+                        )
+                      }
+                    >
+                      <Download className="h-3.5 w-3.5" /> Open
+                    </Button>
+                    {canManageReceipts && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        aria-label={`Remove ${a.originalName}`}
+                        disabled={busy}
+                        onClick={() => {
+                          if (
+                            window.confirm(
+                              `Remove "${a.originalName}" from this claim? This cannot be undone.`,
+                            )
+                          ) {
+                            run(
+                              () => writeApi(`/attachments/${a.id}`, { method: 'DELETE' }),
+                              'Receipt removed',
+                            );
+                          }
+                        }}
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </Button>
+                    )}
+                  </div>
+                  <ReceiptPreview attachment={a} />
+                </div>
+              ))}
+              {canManageReceipts && (attachments?.length ?? 0) >= MAX_RECEIPTS && (
+                <p className="text-sm text-muted-foreground">
+                  This expense has reached the {MAX_RECEIPTS}-receipt limit.
+                </p>
+              )}
+              {canManageReceipts && (attachments?.length ?? 0) < MAX_RECEIPTS && (
+                <label
+                  className={cn(
+                    'flex cursor-pointer flex-col items-center gap-1.5 rounded-lg border border-dashed p-6 text-center transition-colors hover:border-primary hover:bg-accent/40 focus-within:ring-2 focus-within:ring-ring',
+                    busy && 'pointer-events-none opacity-60',
+                  )}
+                >
+                  <Upload className="h-5 w-5 text-primary" />
+                  <span className="text-sm font-medium">Add a receipt</span>
+                  <span className="text-xs text-muted-foreground">
+                    JPEG, PNG, WEBP or PDF · under 5 MB
+                  </span>
+                  <input
+                    type="file"
+                    accept={RECEIPT_ACCEPT}
+                    className="sr-only"
+                    onChange={upload}
+                    disabled={busy}
+                  />
+                </label>
+              )}
+            </CardContent>
+          </Card>
         </aside>
 
         <div className="space-y-6 lg:col-span-2">
@@ -288,85 +371,6 @@ export default function ExpenseDetailPage() {
                 <ApprovalStepper steps={steps} planned={planned} />
               ) : (
                 <p className="text-sm text-muted-foreground">Not submitted yet.</p>
-              )}
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>Receipts</CardTitle>
-              <CardDescription>Keep a copy of every receipt with the claim.</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              {attachments?.length === 0 && !editable && (
-                <p className="text-sm text-muted-foreground">No receipts attached.</p>
-              )}
-              {attachments?.map((a) => (
-                <div key={a.id} className="flex items-center gap-3 rounded-lg border p-3">
-                  <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-muted text-muted-foreground">
-                    <FileText className="h-4 w-4" />
-                  </span>
-                  <div className="min-w-0 flex-1">
-                    <div className="truncate text-sm font-medium">{a.originalName}</div>
-                    <div className="text-xs text-muted-foreground">
-                      {Math.max(1, Math.round(a.sizeBytes / 1024))} KB
-                    </div>
-                  </div>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() =>
-                      openAttachment(a.id).catch((err) =>
-                        setFeedback({ kind: 'error', text: err.message }),
-                      )
-                    }
-                  >
-                    <Download className="h-3.5 w-3.5" /> Open
-                  </Button>
-                  {editable && (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      aria-label={`Remove ${a.originalName}`}
-                      disabled={busy}
-                      onClick={() => {
-                        if (
-                          window.confirm(
-                            `Remove "${a.originalName}" from this claim? This cannot be undone.`,
-                          )
-                        ) {
-                          run(
-                            () => api(`/attachments/${a.id}`, { method: 'DELETE' }),
-                            'Receipt removed',
-                          );
-                        }
-                      }}
-                    >
-                      <Trash2 className="h-3.5 w-3.5" />
-                    </Button>
-                  )}
-                </div>
-              ))}
-              {editable && (
-                <label
-                  className={cn(
-                    'flex cursor-pointer flex-col items-center gap-1.5 rounded-lg border border-dashed p-6 text-center transition-colors hover:border-primary hover:bg-accent/40 focus-within:ring-2 focus-within:ring-ring',
-                    busy && 'pointer-events-none opacity-60',
-                  )}
-                >
-                  <Upload className="h-5 w-5 text-primary" />
-                  <span className="text-sm font-medium">Add a receipt</span>
-                  <span className="text-xs text-muted-foreground">
-                    JPEG, PNG, WEBP or PDF · up to 5 MB
-                  </span>
-                  <input
-                    type="file"
-                    accept="image/jpeg,image/png,image/webp,application/pdf"
-                    className="sr-only"
-                    onChange={upload}
-                    disabled={busy}
-                  />
-                </label>
               )}
             </CardContent>
           </Card>

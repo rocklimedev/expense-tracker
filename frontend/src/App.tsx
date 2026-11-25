@@ -13,6 +13,7 @@ import PoliciesPage from './pages/policies-page';
 import UsersPage from './pages/users-page';
 import RolesPage from './pages/roles-page';
 import ProfilePage from './pages/profile-page';
+import ReportsPage from './pages/reports-page';
 
 export default function App() {
   return (
@@ -30,6 +31,14 @@ export default function App() {
         <Route path="expenses" element={<ExpensesPage />} />
         <Route path="expenses/new" element={<NewExpensePage />} />
         <Route path="expenses/:id" element={<ExpenseDetailPage />} />
+        <Route
+          path="reports"
+          element={
+            <RequirePermission permission="expense.view.all">
+              <ReportsPage />
+            </RequirePermission>
+          }
+        />
         <Route
           path="approvals"
           element={

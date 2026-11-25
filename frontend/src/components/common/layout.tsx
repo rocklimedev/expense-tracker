@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Link, Navigate, NavLink, Outlet, useNavigate } from 'react-router-dom';
 import {
   Banknote,
+  ChartNoAxesColumn,
   ClipboardCheck,
   Grid2X2,
   LogOut,
@@ -10,6 +11,7 @@ import {
   Plus,
   Receipt,
   ShieldCheck,
+  UserRound,
   UserRoundCog,
   Users,
   Wallet,
@@ -49,6 +51,7 @@ const GROUPS: { title: string; items: NavItem[] }[] = [
     items: [
       { to: '/approvals', label: 'To approve', icon: ClipboardCheck, perms: ['expense.approve'] },
       { to: '/payments', label: 'Reimbursements', icon: Banknote, perms: ['payment.record'] },
+      { to: '/reports', label: 'Reports', icon: ChartNoAxesColumn, perms: ['expense.view.all'] },
     ],
   },
   {
@@ -228,7 +231,14 @@ export function AppLayout() {
     ...g,
     items: g.items.filter((i) => i.perms.some((p) => can(p))),
   })).filter((g) => g.items.length > 0);
-  const flat = groups.flatMap((g) => g.items);
+  const mobileTabs = [
+    ...groups.flatMap((g) => g.items).slice(0, 4).map(({ to, label, icon }) => ({
+      to,
+      label: to === '/payments' ? 'Payments' : label,
+      icon,
+    })),
+    { to: '/profile', label: 'Profile', icon: UserRound },
+  ];
   const initials = (user?.name ?? '?')
     .split(' ')
     .map((p) => p[0])
@@ -291,15 +301,16 @@ export function AppLayout() {
         </div>
       )}
 
-      {/* Mobile bottom tabs: the four most-used destinations */}
       <nav
+        aria-label="Mobile navigation"
         className="fixed inset-x-0 bottom-0 z-30 grid border-t bg-card/95 pb-[env(safe-area-inset-bottom)] backdrop-blur lg:hidden"
-        style={{ gridTemplateColumns: `repeat(${Math.min(flat.length, 4) || 1}, minmax(0, 1fr))` }}
+        style={{ gridTemplateColumns: `repeat(${mobileTabs.length}, minmax(0, 1fr))` }}
       >
-        {flat.slice(0, 4).map(({ to, label, icon: Icon }) => (
+        {mobileTabs.map(({ to, label, icon: Icon }) => (
           <NavLink
             key={to}
             to={to}
+            onClick={() => setMenuOpen(false)}
             className={({ isActive }) =>
               cn(
                 'flex flex-col items-center gap-1 py-2.5 text-[11px] font-medium transition-colors',

@@ -1,4 +1,4 @@
-import { ConflictException, Injectable } from '@nestjs/common';
+import { ConflictException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import * as bcrypt from 'bcrypt';
 import { UniqueConstraintError } from 'sequelize';
 import { Sequelize } from 'sequelize-typescript';
@@ -7,6 +7,7 @@ import { Role } from '../rbac/models/role.model';
 import { RbacService } from '../rbac/rbac.service';
 import { User } from './models/user.model';
 import { CreateUserDto } from './dto/create-user.dto';
+import { UpdateUserDto } from './dto/update-user.dto';
 
 @Injectable()
 export class UsersService {
@@ -43,6 +44,46 @@ export class UsersService {
       attributes: { exclude: ['passwordHash'] },
       include: [{ model: Role, attributes: ['id', 'name'] }],
     });
+  }
+
+  async update(id: string, dto: UpdateUserDto, actor: AuthUser) {
+    const passwordHash = dto.password === undefined ? undefined : await bcrypt.hash(dto.password, 10);
+    try {
+      await this.sequelize.transaction(async (transaction) => {
+        const user = await User.findByPk(id, { transaction, lock: transaction.LOCK.UPDATE });
+        if (!user?.isActive) throw new NotFoundException('Active user not found');
+        if (id === actor.id && dto.roleId !== user.roleId) {
+          throw new ForbiddenException('You cannot change your own role');
+        }
+        await this.rbac.checkRoleAssignment(user.roleId, actor, transaction);
+        if (dto.roleId !== user.roleId) {
+          await this.rbac.checkRoleAssignment(dto.roleId, actor, transaction);
+        }
+        await user.update({
+          name: dto.name,
+          email: dto.email,
+          roleId: dto.roleId,
+          ...(passwordHash === undefined ? {} : { passwordHash }),
+        }, { transaction });
+      });
+      return this.sanitize(id);
+    } catch (error) {
+      if (error instanceof UniqueConstraintError)
+        throw new ConflictException('Email already in use');
+      throw error;
+    }
+  }
+
+  async remove(id: string, actor: AuthUser) {
+    if (id === actor.id) throw new ForbiddenException('You cannot delete your own account');
+    await this.sequelize.transaction(async (transaction) => {
+      const user = await User.findByPk(id, { transaction, lock: transaction.LOCK.UPDATE });
+      if (!user) throw new NotFoundException('User not found');
+      await this.rbac.checkRoleAssignment(user.roleId, actor, transaction);
+      // Expenses and audit history retain their references to this account.
+      if (user.isActive) await user.update({ isActive: false }, { transaction });
+    });
+    return { deleted: true };
   }
 
   private sanitize(id: string) {

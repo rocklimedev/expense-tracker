@@ -1,8 +1,7 @@
 import { Fragment, useMemo, useState, type FormEvent } from 'react';
 import { Link } from 'react-router-dom';
 import { Check, X } from 'lucide-react';
-import { api } from '@/lib/api';
-import { useFetch } from '@/lib/use-fetch';
+import { useApiQuery, writeApi } from '@/lib/api-query';
 import { useAuth } from '@/context/auth-context';
 import { money, formatDate, label } from '@/lib/format';
 import { Button } from '@/components/ui/button';
@@ -38,7 +37,7 @@ interface BatchResult {
 
 export default function ApprovalsPage() {
   const { can } = useAuth();
-  const { data, error, loading, reload } = useFetch<QueueItem[]>('/expenses/queue/pending');
+  const { data, error, loading } = useApiQuery<QueueItem[]>('/expenses/queue/pending');
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [comment, setComment] = useState('');
   const [rejectingId, setRejectingId] = useState<string | null>(null);
@@ -63,7 +62,7 @@ export default function ApprovalsPage() {
   async function approveOne(id: string) {
     await run(
       () =>
-        api(`/expenses/${id}/approve`, { method: 'POST', json: { comment: comment || undefined } }),
+        writeApi(`/expenses/${id}/approve`, { method: 'POST', json: { comment: comment || undefined } }),
       'Approved',
     );
   }
@@ -73,7 +72,7 @@ export default function ApprovalsPage() {
     if (rejectingId === null) return;
     await run(
       () =>
-        api(`/expenses/${rejectingId}/reject`, { method: 'POST', json: { reason: rejectReason } }),
+        writeApi(`/expenses/${rejectingId}/reject`, { method: 'POST', json: { reason: rejectReason } }),
       'Rejected',
     );
     setRejectingId(null);
@@ -85,13 +84,12 @@ export default function ApprovalsPage() {
     setMessage(null);
     setBatchResult(null);
     try {
-      const result = await api<BatchResult>('/expenses/batch/approve', {
+      const result = await writeApi<BatchResult>('/expenses/batch/approve', {
         method: 'POST',
         json: { ids: [...selected], comment: comment || undefined },
       });
       setBatchResult(result);
       setSelected(new Set());
-      reload();
     } catch (err) {
       setMessage({ kind: 'error', text: (err as Error).message });
     } finally {
@@ -105,7 +103,6 @@ export default function ApprovalsPage() {
     try {
       await action();
       setMessage({ kind: 'ok', text: okText });
-      reload();
     } catch (err) {
       setMessage({ kind: 'error', text: (err as Error).message });
     } finally {

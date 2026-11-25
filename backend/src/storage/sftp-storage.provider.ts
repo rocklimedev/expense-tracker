@@ -14,13 +14,19 @@ export class SftpStorageProvider implements StorageProvider {
   constructor(config: ConfigService) {
     this.basePath = config.getOrThrow<string>('SFTP_BASE_PATH').replace(/\/+$/, '');
 
+    const inlineKey = config.get<string>('SFTP_PRIVATE_KEY')?.trim();
     const keyPath = config.get<string>('SFTP_PRIVATE_KEY_PATH');
+    const privateKey = inlineKey
+      ? inlineKey.replace(/\\n/g, '\n') + '\n'
+      : keyPath
+        ? this.readPrivateKey(keyPath)
+        : undefined;
     this.connectionOptions = {
       host: config.getOrThrow<string>('SFTP_HOST'),
       port: Number(config.get('SFTP_PORT', 22)),
       username: config.getOrThrow<string>('SFTP_USER'),
-      ...(keyPath
-        ? { privateKey: this.readPrivateKey(keyPath) }
+      ...(privateKey
+        ? { privateKey }
         : { password: config.getOrThrow<string>('SFTP_PASSWORD') }),
       readyTimeout: 10_000,
     };
@@ -33,7 +39,7 @@ export class SftpStorageProvider implements StorageProvider {
     } catch (cause) {
       throw new Error(
         `Cannot read SFTP private key at ${resolvedPath} (${(cause as NodeJS.ErrnoException).code}). ` +
-          'Set SFTP_PRIVATE_KEY_PATH to a readable key file, or unset it and set SFTP_PASSWORD for password authentication.',
+          'Set SFTP_PRIVATE_KEY to the inline key, use a readable SFTP_PRIVATE_KEY_PATH, or configure SFTP_PASSWORD.',
       );
     }
   }

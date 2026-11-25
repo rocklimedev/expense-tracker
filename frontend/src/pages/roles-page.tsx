@@ -14,8 +14,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { label } from '@/lib/format';
-import { useFetch } from '@/lib/use-fetch';
-import { api } from '@/lib/api';
+import { useApiQuery, writeApi } from '@/lib/api-query';
 import { useAuth } from '@/context/auth-context';
 
 interface RolePermissions {
@@ -24,7 +23,7 @@ interface RolePermissions {
 }
 
 export default function RolesPage({ matrix = false }: { matrix?: boolean }) {
-  const { data, error, reload, setData } = useFetch<RolePermissions>('/rbac/roles');
+  const { data, error, reload } = useApiQuery<RolePermissions>('/rbac/roles');
   const { user, refreshPermissions } = useAuth();
   const [name, setName] = useState('');
   const [saving, setSaving] = useState(false);
@@ -36,13 +35,12 @@ export default function RolesPage({ matrix = false }: { matrix?: boolean }) {
     setSaving(true);
     setMessage(null);
     try {
-      await api('/rbac/roles', {
+      await writeApi('/rbac/roles', {
         method: 'POST',
         json: { name: name.trim().toUpperCase().replace(/[ _]+/g, '_') },
       });
       setName('');
       setMessage({ kind: 'ok', text: 'Role created. Use the permissions matrix to grant access.' });
-      reload();
     } catch (err) {
       setMessage({ kind: 'error', text: (err as Error).message });
     } finally {
@@ -58,26 +56,10 @@ export default function RolesPage({ matrix = false }: { matrix?: boolean }) {
     setSaving(true);
     setMessage(null);
     try {
-      await api(`/rbac/roles/${role.id}/permissions/${encodeURIComponent(code)}`, {
+      await writeApi(`/rbac/roles/${role.id}/permissions/${encodeURIComponent(code)}`, {
         method: 'PUT',
         json: { granted },
       });
-      setData(
-        (current) =>
-          current && {
-            ...current,
-            roles: current.roles.map((entry) =>
-              entry.id === role.id
-                ? {
-                    ...entry,
-                    permissions: granted
-                      ? [...entry.permissions, code]
-                      : entry.permissions.filter((permission) => permission !== code),
-                  }
-                : entry,
-            ),
-          },
-      );
       setMessage({
         kind: 'ok',
         text: `${code} ${granted ? 'granted to' : 'revoked from'} ${label(role.name)}.`,
