@@ -15,6 +15,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Field } from '@/components/common/field';
 import { Notice } from '@/components/common/notice';
 import { ApprovalStepper } from '@/components/common/approval-stepper';
+import { ExpenseDetailsFields, emptyExpenseDetails, expenseDetailsPayload } from '@/components/common/expense-details-fields';
 
 const MAX_DESCRIPTION = 500;
 
@@ -34,6 +35,7 @@ export default function NewExpensePage() {
   const [amount, setAmount] = useState('');
   const [expenseDate, setExpenseDate] = useState(todayIso());
   const [description, setDescription] = useState('');
+  const [expenseDetails, setExpenseDetails] = useState(emptyExpenseDetails);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState<'draft' | 'submit' | null>(null);
   const [draftId, setDraftId] = useState<string>();
@@ -120,6 +122,7 @@ export default function NewExpensePage() {
             amount: amountNum,
             expenseDate,
             description: description.trim() || undefined,
+            ...expenseDetailsPayload(expenseDetails),
           },
         });
         id = created.id;
@@ -161,11 +164,14 @@ export default function NewExpensePage() {
         <ArrowLeft className="h-4 w-4" /> Back
       </button>
 
-      <div className="mb-8">
-        <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">New expense</h1>
-        <p className="mt-1.5 text-sm text-muted-foreground">
-          Takes about a minute. Save it now, or submit for approval straight away.
-        </p>
+      <div className="mb-8 flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">New expense</h1>
+          <p className="mt-1.5 text-sm text-muted-foreground">
+            Takes about a minute. Save it now, or submit for approval straight away.
+          </p>
+        </div>
+        <Button type="button" variant="outline" onClick={() => navigate('/expenses/batch')}>Batch entry</Button>
       </div>
 
       <div className="grid gap-6 lg:grid-cols-5">
@@ -342,6 +348,7 @@ export default function NewExpensePage() {
                     {description.length}/{MAX_DESCRIPTION}
                   </div>
                 </Field>
+                <ExpenseDetailsFields id="new-expense" value={expenseDetails} onChange={setExpenseDetails} />
               </fieldset>
 
               <Field label="Receipts (optional)" htmlFor="expense-receipts">
@@ -410,7 +417,9 @@ export default function NewExpensePage() {
                   type="button"
                   className="h-10"
                   disabled={busy !== null || !category || addingCategory}
-                  onClick={() => save(true)}
+                  onClick={(event) => {
+                    if (event.currentTarget.form?.reportValidity()) void save(true);
+                  }}
                 >
                   <Send className="h-4 w-4" />
                   {busy === 'submit' ? 'Submitting…' : 'Submit for approval'}

@@ -24,8 +24,8 @@ Stack: NestJS, MySQL, Sequelize (sequelize-typescript), TypeScript, JWT auth, SF
 |---|---|
 | SUPER_ADMIN | Configures the system. Holds every permission. Manages approval policies and roles. |
 | ADMIN | Manages users, approves high-value steps, batch-approves, views all expenses. |
-| CA | Chartered Accountant. Reviews and approves claims, batch-approves, rejects. |
-| FINANCE_EXECUTIVE | Records payments on approved claims. Views all expenses. |
+| CA | Creates and submits expenses. Reviews, approves, batch-approves, and rejects other users' claims. |
+| FINANCE_EXECUTIVE | Creates and submits expenses, views all expenses, and records payments on approved claims. |
 | EMPLOYEE | Creates expenses and trackers, uploads receipts, submits, resubmits rejected claims. |
 
 Access control is **permission based**, not role based. Each role is a list of permissions (for example `expense.approve`, `expense.approve.high`, `payment.record`). Code checks permissions, so Super Admin can change what a role can do without a code change.

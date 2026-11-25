@@ -4,7 +4,8 @@ export type ExpenseStatus =
   | 'APPROVED'
   | 'REJECTED'
   | 'PARTIALLY_PAID'
-  | 'PAID';
+  | 'PAID'
+  | 'REIMBURSEMENT_CANCELLED';
 
 export interface ExpenseCategory {
   code: string;
@@ -40,6 +41,7 @@ export interface HistoryEntry {
 
 export interface Expense {
   id: string;
+  editableUntil?: string | null;
   employeeId: string;
   trackerId: string | null;
   scheduleId: string | null;
@@ -49,6 +51,10 @@ export interface Expense {
   currency: string;
   expenseDate: string;
   description: string | null;
+  toldBy?: string | null;
+  reason?: string | null;
+  paidTo?: string | null;
+  reimbursementCancellationReason?: string | null;
   status: ExpenseStatus;
   paidAmount: number | string;
   submittedAt: string | null;

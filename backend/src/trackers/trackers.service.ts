@@ -7,7 +7,7 @@ import {
 } from '@nestjs/common';
 import { InjectConnection } from '@nestjs/sequelize';
 import { Sequelize } from 'sequelize-typescript';
-import { Op, fn, col } from 'sequelize';
+import { Op, fn, col, literal } from 'sequelize';
 import { Permissions } from '../common/permissions';
 import { AuthUser } from '../common/types';
 import { User } from '../users/models/user.model';
@@ -155,7 +155,7 @@ export class TrackersService {
       where: { trackerId: tracker.id, status: { [Op.ne]: ExpenseStatus.REJECTED } },
       attributes: [
         [fn('DATE_FORMAT', col('expenseDate'), '%Y-%m'), 'month'],
-        [fn('SUM', col('amount')), 'total'],
+        [fn('SUM', literal(`CASE WHEN status = '${ExpenseStatus.REIMBURSEMENT_CANCELLED}' THEN paidAmount ELSE amount END`)), 'total'],
       ],
       group: ['month'],
       order: [['month', 'ASC']],
@@ -163,7 +163,9 @@ export class TrackersService {
     })) as unknown as Array<{ month: string; total: string }>;
 
     const counted = byStatus.filter((r) => r.status !== ExpenseStatus.REJECTED);
-    const committed = sum(counted.map((r) => Number(r.total)));
+    const committed = sum(counted.map((row) =>
+      Number(row.status === ExpenseStatus.REIMBURSEMENT_CANCELLED ? row.paid : row.total),
+    ));
     const paid = sum(byStatus.map((r) => Number(r.paid)));
     const outstanding = sum(
       byStatus

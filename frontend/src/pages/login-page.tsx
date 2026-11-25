@@ -19,6 +19,7 @@ export default function LoginPage() {
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [showResetHelp, setShowResetHelp] = useState(false);
 
   if (user) return <Navigate to="/" replace />;
 
@@ -115,6 +116,18 @@ export default function LoginPage() {
               {busy ? 'Signing in…' : 'Sign in'}
             </Button>
           </form>
+          <button
+            type="button"
+            aria-expanded={showResetHelp}
+            aria-controls="password-reset-help"
+            className="mt-4 text-sm font-medium text-primary hover:underline"
+            onClick={() => setShowResetHelp(!showResetHelp)}
+          >
+            Forgot password?
+          </button>
+          <p id="password-reset-help" hidden={!showResetHelp} className="mt-2 text-sm text-muted-foreground">
+            Ask your team administrator to reset your password from the Team page.
+          </p>
         </div>
       </main>
     </div>

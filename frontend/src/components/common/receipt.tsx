@@ -41,8 +41,8 @@ export function Receipt({
       <dl className="space-y-3 px-6 py-5 text-sm">
         {lines.map((l) => (
           <div key={l.label} className="flex items-baseline justify-between gap-4">
-            <dt className="text-muted-foreground">{l.label}</dt>
-            <dd className="text-right font-medium">{l.value}</dd>
+              <dt className="shrink-0 text-muted-foreground">{l.label}</dt>
+              <dd className="min-w-0 whitespace-pre-line break-words text-right font-medium">{l.value}</dd>
           </div>
         ))}
       </dl>

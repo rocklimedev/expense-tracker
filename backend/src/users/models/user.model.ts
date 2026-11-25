@@ -21,6 +21,11 @@ export class User extends Model {
   @Column(DataType.STRING(255))
   passwordHash!: string;
 
+  @AllowNull(false)
+  @Default(0)
+  @Column(DataType.INTEGER.UNSIGNED)
+  passwordVersion!: number;
+
   @Default(true)
   @Column(DataType.BOOLEAN)
   isActive!: boolean;

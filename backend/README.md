@@ -55,3 +55,16 @@ recurring schedules, and approval policies and links those records to the catego
 ```sh
 mysql -h HOST -u USER -p DB_NAME < backend/migrations/003-expense-categories.sql
 ```
+
+## Add expense details and reimbursement cancellation
+
+Back up the database and apply migration 004 after migration 003 and before starting
+the updated production API.
+
+```sh
+mysql -h HOST -u USER -p DB_NAME < backend/migrations/004-expense-details-and-reimbursement-cancellation.sql
+```
+
+Batch entry creates up to 25 drafts in one transaction. A user with payment-recording
+permission can cancel the unpaid balance on an approved or partially paid expense.
+The cancellation reason appears in the expense and its activity history.

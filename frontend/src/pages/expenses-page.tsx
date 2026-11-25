@@ -13,6 +13,7 @@ import {
   monthKey,
   monthName,
   num,
+  spendAmount,
 } from '@/lib/spend';
 import type { Expense, ExpenseStatus } from '@/lib/types';
 import { cn } from '@/lib/utils';
@@ -26,23 +27,24 @@ import { EmptyState } from '@/components/common/empty-state';
 import { Notice } from '@/components/common/notice';
 import { MonthlyBars, CategoryBreakdown } from '@/components/common/spend-chart';
 
-type Filter = 'ALL' | 'PENDING' | 'TO_REIMBURSE' | 'PAID' | 'DRAFT' | 'REJECTED';
+type Filter = 'ALL' | 'PENDING' | 'TO_REIMBURSE' | 'PAID' | 'DRAFT' | 'REJECTED' | 'REIMBURSEMENT_CANCELLED';
 
 const FILTERS: { value: Filter; label: string; match: ExpenseStatus[] }[] = [
   {
     value: 'ALL',
     label: 'All',
-    match: ['DRAFT', 'SUBMITTED', 'APPROVED', 'REJECTED', 'PARTIALLY_PAID', 'PAID'],
+    match: ['DRAFT', 'SUBMITTED', 'APPROVED', 'REJECTED', 'PARTIALLY_PAID', 'PAID', 'REIMBURSEMENT_CANCELLED'],
   },
   { value: 'PENDING', label: 'Pending approval', match: ['SUBMITTED'] },
   { value: 'TO_REIMBURSE', label: 'To reimburse', match: ['APPROVED', 'PARTIALLY_PAID'] },
   { value: 'PAID', label: 'Paid', match: ['PAID'] },
   { value: 'DRAFT', label: 'Drafts', match: ['DRAFT'] },
   { value: 'REJECTED', label: 'Rejected', match: ['REJECTED'] },
+  { value: 'REIMBURSEMENT_CANCELLED', label: 'Reimbursement cancelled', match: ['REIMBURSEMENT_CANCELLED'] },
 ];
 
 function searchText(e: Expense) {
-  return [label(e.category), e.description ?? '', e.employee?.name ?? '', String(e.amount)]
+  return [label(e.category), e.description, e.employee?.name, e.toldBy, e.reason, e.paidTo, String(e.amount)]
     .join(' ')
     .toLowerCase();
 }
@@ -88,7 +90,7 @@ export default function ExpensesPage() {
         key,
         total: all
           .filter((e) => isSpend(e) && monthKey(e.expenseDate) === key)
-          .reduce((s, e) => s + num(e.amount), 0),
+          .reduce((s, e) => s + spendAmount(e), 0),
       })),
     [all, months],
   );
@@ -97,7 +99,7 @@ export default function ExpensesPage() {
     () => all.filter((e) => isSpend(e) && monthKey(e.expenseDate) === thisMonth),
     [all, thisMonth],
   );
-  const monthTotal = monthClaims.reduce((s, e) => s + num(e.amount), 0);
+  const monthTotal = monthClaims.reduce((s, e) => s + spendAmount(e), 0);
   const lastMonthTotal = spendByMonth[spendByMonth.length - 2]?.total ?? 0;
   const change =
     lastMonthTotal > 0 ? Math.round(((monthTotal - lastMonthTotal) / lastMonthTotal) * 100) : null;
@@ -119,9 +121,12 @@ export default function ExpensesPage() {
   const groups = useMemo(() => groupByDay(rows), [rows]);
 
   const newButton = can('expense.create') && (
-    <Button onClick={() => navigate('/expenses/new')}>
-      <Plus className="h-4 w-4" /> New expense
-    </Button>
+    <>
+      <Button variant="outline" onClick={() => navigate('/expenses/batch')}>Batch entry</Button>
+      <Button onClick={() => navigate('/expenses/new')}>
+        <Plus className="h-4 w-4" /> New expense
+      </Button>
+    </>
   );
 
   return (

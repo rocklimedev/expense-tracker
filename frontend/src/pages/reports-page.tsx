@@ -83,7 +83,7 @@ const member = (expense: Expense) => ({
   name: expense.employee?.name ?? expense.employeeId,
 });
 const category = (expense: Expense) => ({ id: expense.category, name: label(expense.category) });
-const statuses = ['DRAFT', 'SUBMITTED', 'APPROVED', 'REJECTED', 'PARTIALLY_PAID', 'PAID'];
+const statuses = ['DRAFT', 'SUBMITTED', 'APPROVED', 'REJECTED', 'PARTIALLY_PAID', 'PAID', 'REIMBURSEMENT_CANCELLED'];
 
 export default function ReportsPage() {
   const { data: expenses, error } = useApiQuery<Expense[]>('/expenses');

@@ -7,6 +7,7 @@ const STYLES: Record<string, { pill: string; dot: string }> = {
   APPROVED: { pill: 'bg-sky-50 text-sky-800', dot: 'bg-sky-500' },
   PARTIALLY_PAID: { pill: 'bg-violet-50 text-violet-800', dot: 'bg-violet-500' },
   PAID: { pill: 'bg-emerald-50 text-emerald-800', dot: 'bg-emerald-600' },
+  REIMBURSEMENT_CANCELLED: { pill: 'bg-slate-100 text-slate-700', dot: 'bg-slate-500' },
   REJECTED: { pill: 'bg-rose-50 text-rose-700', dot: 'bg-rose-500' },
   PENDING: { pill: 'bg-slate-100 text-slate-700', dot: 'bg-slate-400' },
   ACTIVE: { pill: 'bg-emerald-50 text-emerald-800', dot: 'bg-emerald-600' },

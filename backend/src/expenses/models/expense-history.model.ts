@@ -11,11 +11,11 @@ export class ExpenseHistory extends Model {
   @Column(DataType.UUID)
   expenseId!: string;
 
-  @Column(DataType.STRING(20))
+  @Column(DataType.STRING(32))
   fromStatus!: string;
 
   @AllowNull(false)
-  @Column(DataType.STRING(20))
+  @Column(DataType.STRING(32))
   toStatus!: string;
 
   @AllowNull(false)

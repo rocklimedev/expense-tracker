@@ -4,6 +4,7 @@ import {
   Get,
   Param,
   ParseUUIDPipe,
+  Patch,
   Post,
   Query,
   Req,
@@ -15,6 +16,8 @@ import { RequirePermissions } from '../common/decorators/require-permissions.dec
 import { Permissions } from '../common/permissions';
 import { ExpensesService } from './expenses.service';
 import { CreateExpenseDto } from './dto/create-expense.dto';
+import { CreateExpenseBatchDto } from './dto/create-expense-batch.dto';
+import { CancelReimbursementDto } from '../payments/dto/cancel-reimbursement.dto';
 import { RejectExpenseDto } from './dto/reject-expense.dto';
 import { BatchApproveDto } from './dto/batch-approve.dto';
 import { ExpenseStatus } from './expense-workflow';
@@ -29,6 +32,12 @@ export class ExpensesController {
   @RequirePermissions(Permissions.EXPENSE_CREATE)
   create(@Req() req, @Body() dto: CreateExpenseDto) {
     return this.expenses.create(req.user, dto);
+  }
+
+  @Post('batch')
+  @RequirePermissions(Permissions.EXPENSE_CREATE)
+  createBatch(@Req() req, @Body() dto: CreateExpenseBatchDto) {
+    return this.expenses.createBatch(req.user, dto.expenses);
   }
 
   @Get()
@@ -62,6 +71,12 @@ export class ExpensesController {
     return this.expenses.findOne(req.user, id);
   }
 
+  @Patch(':id')
+  @RequirePermissions(Permissions.EXPENSE_CREATE)
+  update(@Req() req, @Param('id', ParseUUIDPipe) id: string, @Body() dto: CreateExpenseDto) {
+    return this.expenses.update(req.user, id, dto);
+  }
+
   @Post(':id/submit')
   submit(@Req() req, @Param('id', ParseUUIDPipe) id: string) {
     return this.expenses.submit(req.user, id);
@@ -71,6 +86,16 @@ export class ExpensesController {
   @RequirePermissions(Permissions.EXPENSE_APPROVE)
   approve(@Req() req, @Param('id', ParseUUIDPipe) id: string, @Body('comment') comment?: string) {
     return this.expenses.approve(req.user, id, comment);
+  }
+
+  @Post(':id/cancel-reimbursement')
+  @RequirePermissions(Permissions.PAYMENT_RECORD)
+  cancelReimbursement(
+    @Req() req,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: CancelReimbursementDto,
+  ) {
+    return this.expenses.cancelReimbursement(req.user, id, dto.reason);
   }
 
   @Post(':id/reject')

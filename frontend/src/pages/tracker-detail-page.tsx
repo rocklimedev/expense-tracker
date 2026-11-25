@@ -2,6 +2,7 @@ import { useState, type FormEvent } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { Eye, RefreshCw, Send } from 'lucide-react';
 import { useApiQuery, writeApi } from '@/lib/api-query';
+import { ExpenseDetailsFields, emptyExpenseDetails, expenseDetailsPayload } from '@/components/common/expense-details-fields';
 import { useAuth } from '@/context/auth-context';
 import { money, formatDate, todayIso, label } from '@/lib/format';
 import { FREQUENCIES } from '@/lib/constants';
@@ -64,6 +65,7 @@ export default function TrackerDetailPage() {
   const [expAmount, setExpAmount] = useState('');
   const [expDate, setExpDate] = useState(todayIso());
   const [expDesc, setExpDesc] = useState('');
+  const [expenseDetails, setExpenseDetails] = useState(emptyExpenseDetails);
 
   if (tracker.error) return <Notice kind="error">{tracker.error}</Notice>;
   if (!tracker.data) return <div className="text-sm text-muted-foreground">Loading…</div>;
@@ -120,12 +122,14 @@ export default function TrackerDetailPage() {
             amount: Number(expAmount),
             expenseDate: expDate,
             description: expDesc || undefined,
+            ...expenseDetailsPayload(expenseDetails),
           },
         }),
       'Expense added as a draft',
     );
     setExpAmount('');
     setExpDesc('');
+    setExpenseDetails(emptyExpenseDetails);
   }
 
   async function previewDrafts() {
@@ -495,6 +499,7 @@ export default function TrackerDetailPage() {
                       onChange={(e) => setExpDesc(e.target.value)}
                     />
                   </Field>
+                  <ExpenseDetailsFields id="budget-expense" value={expenseDetails} onChange={setExpenseDetails} />
                   <Button
                     type="submit"
                     variant="secondary"

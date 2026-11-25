@@ -41,8 +41,16 @@ export class UsersService {
 
   findAll() {
     return User.findAll({
-      attributes: { exclude: ['passwordHash'] },
+      attributes: { exclude: ['passwordHash', 'passwordVersion'] },
       include: [{ model: Role, attributes: ['id', 'name'] }],
+    });
+  }
+
+  listExpenseRequesters() {
+    return User.findAll({
+      attributes: ['id', 'name'],
+      where: { isActive: true },
+      order: [['name', 'ASC'], ['id', 'ASC']],
     });
   }
 
@@ -63,7 +71,7 @@ export class UsersService {
           name: dto.name,
           email: dto.email,
           roleId: dto.roleId,
-          ...(passwordHash === undefined ? {} : { passwordHash }),
+          ...(passwordHash === undefined ? {} : { passwordHash, passwordVersion: user.passwordVersion + 1 }),
         }, { transaction });
       });
       return this.sanitize(id);
@@ -72,6 +80,17 @@ export class UsersService {
         throw new ConflictException('Email already in use');
       throw error;
     }
+  }
+
+  async resetPassword(id: string, password: string, actor: AuthUser) {
+    const passwordHash = await bcrypt.hash(password, 10);
+    await this.sequelize.transaction(async (transaction) => {
+      const user = await User.findByPk(id, { transaction, lock: transaction.LOCK.UPDATE });
+      if (!user?.isActive) throw new NotFoundException('Active user not found');
+      await this.rbac.checkRoleAssignment(user.roleId, actor, transaction);
+      await user.update({ passwordHash, passwordVersion: user.passwordVersion + 1 }, { transaction });
+    });
+    return { reset: true };
   }
 
   async remove(id: string, actor: AuthUser) {
@@ -88,7 +107,7 @@ export class UsersService {
 
   private sanitize(id: string) {
     return User.findByPk(id, {
-      attributes: { exclude: ['passwordHash'] },
+      attributes: { exclude: ['passwordHash', 'passwordVersion'] },
       include: [Role],
     });
   }

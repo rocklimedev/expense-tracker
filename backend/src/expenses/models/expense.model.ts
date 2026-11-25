@@ -60,6 +60,18 @@ export class Expense extends Model {
   @Column(DataType.STRING(500))
   description!: string;
 
+  @Column(DataType.STRING(120))
+  toldBy!: string | null;
+
+  @Column(DataType.STRING(500))
+  reason!: string | null;
+
+  @Column(DataType.STRING(120))
+  paidTo!: string | null;
+
+  @Column(DataType.STRING(500))
+  reimbursementCancellationReason!: string | null;
+
   @Default(ExpenseStatus.DRAFT)
   @Column(DataType.ENUM(...Object.values(ExpenseStatus)))
   status!: ExpenseStatus;

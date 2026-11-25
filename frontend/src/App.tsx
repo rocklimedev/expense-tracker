@@ -14,6 +14,7 @@ import UsersPage from './pages/users-page';
 import RolesPage from './pages/roles-page';
 import ProfilePage from './pages/profile-page';
 import ReportsPage from './pages/reports-page';
+import BatchExpensePage from './pages/batch-expense-page';
 
 export default function App() {
   return (
@@ -30,6 +31,9 @@ export default function App() {
         <Route path="profile" element={<ProfilePage />} />
         <Route path="expenses" element={<ExpensesPage />} />
         <Route path="expenses/new" element={<NewExpensePage />} />
+        <Route path="expenses/batch" element={
+          <RequirePermission permission="expense.create"><BatchExpensePage /></RequirePermission>
+        } />
         <Route path="expenses/:id" element={<ExpenseDetailPage />} />
         <Route
           path="reports"

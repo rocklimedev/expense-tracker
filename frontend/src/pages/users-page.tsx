@@ -21,7 +21,7 @@ import { PageHeader } from '@/components/common/page-header';
 import { StatusBadge } from '@/components/common/status-badge';
 
 export default function UsersPage() {
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
   const { data, error } = useApiQuery<AppUser[]>('/users');
   const { data: roles, error: rolesError } =
     useApiQuery<NonNullable<AppUser['role']>[]>('/users/roles');
@@ -31,6 +31,11 @@ export default function UsersPage() {
   const [selectedRoleId, setRoleId] = useState('');
   const [editing, setEditing] = useState<AppUser | null>(null);
   const form = useRef<HTMLFormElement>(null);
+  const resetDialog = useRef<HTMLDialogElement>(null);
+  const [resetMember, setResetMember] = useState<AppUser | null>(null);
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmedPassword, setConfirmedPassword] = useState('');
+  const [resetError, setResetError] = useState<string>();
   const roleId = selectedRoleId || roles?.find((role) => role.name === 'EMPLOYEE')?.id || '';
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<{ kind: 'ok' | 'error'; text: string } | null>(null);
@@ -63,6 +68,42 @@ export default function UsersPage() {
       setMessage({ kind: 'ok', text: `${member.name}’s account was deleted.` });
     } catch (err) {
       setMessage({ kind: 'error', text: (err as Error).message });
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  function openReset(member: AppUser) {
+    setResetMember(member);
+    setNewPassword('');
+    setConfirmedPassword('');
+    setResetError(undefined);
+    resetDialog.current?.showModal();
+  }
+
+  async function resetPassword(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!resetMember || busy) return;
+    if (newPassword !== confirmedPassword) {
+      setResetError('The passwords do not match.');
+      return;
+    }
+    if (new TextEncoder().encode(newPassword).length > 72) {
+      setResetError('Use a password no longer than 72 bytes.');
+      return;
+    }
+    setBusy(true);
+    setResetError(undefined);
+    try {
+      await writeApi(`/users/${resetMember.id}/password`, { method: 'PATCH', json: { password: newPassword } });
+      resetDialog.current?.close();
+      if (resetMember.id === user?.id) {
+        logout();
+      } else {
+        setMessage({ kind: 'ok', text: `Password reset for ${resetMember.name}.` });
+      }
+    } catch (err) {
+      setResetError((err as Error).message);
     } finally {
       setBusy(false);
     }
@@ -131,6 +172,9 @@ export default function UsersPage() {
                         <div className="flex gap-1">
                           <Button size="sm" variant="ghost" disabled={busy} aria-label={`Edit ${u.name}`} onClick={() => edit(u)}>
                             Edit
+                          </Button>
+                          <Button size="sm" variant="ghost" disabled={busy} aria-label={`Reset password for ${u.name}`} onClick={() => openReset(u)}>
+                            Reset password
                           </Button>
                           {u.id !== user?.id && (
                             <Button size="sm" variant="ghost" className="text-destructive" disabled={busy} aria-label={`Delete ${u.name}`} onClick={() => void remove(u)}>
@@ -205,6 +249,38 @@ export default function UsersPage() {
           </form>
         </Card>
       </div>
+      <dialog
+        ref={resetDialog}
+        aria-labelledby="reset-password-title"
+        className="m-auto w-[calc(100%_-_2rem)] max-w-md rounded-xl border bg-card p-6 text-card-foreground shadow-xl backdrop:bg-black/60"
+        onCancel={(e) => { if (busy) e.preventDefault(); }}
+        onClose={() => {
+          setResetMember(null);
+          setNewPassword('');
+          setConfirmedPassword('');
+        }}
+      >
+        <form className="space-y-4" onSubmit={resetPassword}>
+          <div>
+            <h2 id="reset-password-title" className="text-lg font-semibold">Reset password</h2>
+            <p className="text-sm text-muted-foreground">{resetMember?.name} will be signed out of existing sessions.</p>
+          </div>
+          <Field label="New password" htmlFor="reset-password">
+            <Input id="reset-password" type="password" required minLength={8} maxLength={72} autoComplete="new-password"
+              value={newPassword} disabled={busy} onChange={(e) => setNewPassword(e.target.value)} />
+            <p className="text-xs text-muted-foreground">Use at least 8 characters.</p>
+          </Field>
+          <Field label="Confirm new password" htmlFor="confirm-reset-password">
+            <Input id="confirm-reset-password" type="password" required autoComplete="new-password"
+              value={confirmedPassword} disabled={busy} onChange={(e) => setConfirmedPassword(e.target.value)} />
+          </Field>
+          {resetError && <Notice kind="error">{resetError}</Notice>}
+          <div className="flex justify-end gap-2">
+            <Button type="button" variant="outline" disabled={busy} onClick={() => resetDialog.current?.close()}>Cancel</Button>
+            <Button type="submit" disabled={busy}>{busy ? 'Resetting…' : 'Reset password'}</Button>
+          </div>
+        </form>
+      </dialog>
     </>
   );
 }

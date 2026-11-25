@@ -1,13 +1,17 @@
 import type { Expense } from './types';
 import { daysAgoIso, toIsoDate, todayIso } from './format';
 
-/** Drafts and rejected claims are not spending. Everything else counts. */
-const SPEND_STATUSES: string[] = ['SUBMITTED', 'APPROVED', 'PARTIALLY_PAID', 'PAID'];
+const SPEND_STATUSES = ['SUBMITTED', 'APPROVED', 'PARTIALLY_PAID', 'PAID'];
 
 export const num = (v: number | string | null | undefined) => Number(v ?? 0);
 
 export function isSpend(e: Expense) {
-  return SPEND_STATUSES.includes(e.status);
+  return SPEND_STATUSES.includes(e.status)
+    || (e.status === 'REIMBURSEMENT_CANCELLED' && num(e.paidAmount) > 0);
+}
+
+export function spendAmount(e: Expense) {
+  return num(e.status === 'REIMBURSEMENT_CANCELLED' ? e.paidAmount : e.amount);
 }
 
 export function monthKey(iso: string) {
@@ -46,7 +50,7 @@ export function categoryTotals(list: Expense[]) {
   const map = new Map<string, { category: string; total: number; count: number }>();
   for (const e of list) {
     const row = map.get(e.category) ?? { category: e.category, total: 0, count: 0 };
-    row.total += num(e.amount);
+    row.total += spendAmount(e);
     row.count += 1;
     map.set(e.category, row);
   }

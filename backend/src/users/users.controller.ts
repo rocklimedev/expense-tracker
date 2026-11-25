@@ -7,6 +7,7 @@ import { AuthUser } from '../common/types';
 import { RbacService } from '../rbac/rbac.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
+import { ResetPasswordDto } from './dto/reset-password.dto';
 import { UsersService } from './users.service';
 
 @Controller('users')
@@ -35,6 +36,12 @@ export class UsersController {
     return this.rbac.listAssignableRoles(request.user);
   }
 
+  @Get('expense-requesters')
+  @RequirePermissions(Permissions.EXPENSE_CREATE)
+  listExpenseRequesters() {
+    return this.users.listExpenseRequesters();
+  }
+
   @Patch(':id')
   @RequirePermissions(Permissions.USER_MANAGE)
   update(@Param('id', ParseUUIDPipe) id: string, @Body() dto: UpdateUserDto, @Req() request: { user: AuthUser }) {
@@ -45,5 +52,11 @@ export class UsersController {
   @RequirePermissions(Permissions.USER_MANAGE)
   remove(@Param('id', ParseUUIDPipe) id: string, @Req() request: { user: AuthUser }) {
     return this.users.remove(id, request.user);
+  }
+
+  @Patch(':id/password')
+  @RequirePermissions(Permissions.USER_MANAGE)
+  resetPassword(@Param('id', ParseUUIDPipe) id: string, @Body() dto: ResetPasswordDto, @Req() request: { user: AuthUser }) {
+    return this.users.resetPassword(id, dto.password, request.user);
   }
 }

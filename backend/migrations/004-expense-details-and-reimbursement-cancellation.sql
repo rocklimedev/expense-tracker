@@ -1,0 +1,12 @@
+ALTER TABLE expense_history
+  MODIFY COLUMN fromStatus VARCHAR(32) COLLATE utf8mb4_unicode_ci NULL,
+  MODIFY COLUMN toStatus VARCHAR(32) COLLATE utf8mb4_unicode_ci NOT NULL;
+
+ALTER TABLE expenses
+  ADD COLUMN toldBy VARCHAR(120) COLLATE utf8mb4_unicode_ci NULL,
+  ADD COLUMN reason VARCHAR(500) COLLATE utf8mb4_unicode_ci NULL,
+  ADD COLUMN paidTo VARCHAR(120) COLLATE utf8mb4_unicode_ci NULL,
+  ADD COLUMN reimbursementCancellationReason VARCHAR(500) COLLATE utf8mb4_unicode_ci NULL,
+  MODIFY COLUMN status ENUM(
+    'DRAFT', 'SUBMITTED', 'APPROVED', 'REJECTED', 'PARTIALLY_PAID', 'PAID', 'REIMBURSEMENT_CANCELLED'
+  ) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'DRAFT';

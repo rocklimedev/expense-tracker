@@ -12,11 +12,16 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<string, Permission[]> = {
     Permissions.EXPENSE_BATCH_APPROVE,
   ],
   CA: [
+    Permissions.EXPENSE_CREATE,
     Permissions.EXPENSE_VIEW_ALL,
     Permissions.EXPENSE_APPROVE,
     Permissions.EXPENSE_REJECT,
     Permissions.EXPENSE_BATCH_APPROVE,
   ],
-  FINANCE_EXECUTIVE: [Permissions.EXPENSE_VIEW_ALL, Permissions.PAYMENT_RECORD],
+  FINANCE_EXECUTIVE: [
+    Permissions.EXPENSE_CREATE,
+    Permissions.EXPENSE_VIEW_ALL,
+    Permissions.PAYMENT_RECORD,
+  ],
   EMPLOYEE: [Permissions.EXPENSE_CREATE, Permissions.EXPENSE_VIEW_OWN],
 };

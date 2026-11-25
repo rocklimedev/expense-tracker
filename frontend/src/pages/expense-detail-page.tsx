@@ -1,6 +1,6 @@
-import { useState, type ChangeEvent, type FormEvent } from 'react';
+import { useEffect, useState, type ChangeEvent, type FormEvent } from 'react';
 import { Link, useLocation, useParams } from 'react-router-dom';
-import { ArrowLeft, Download, FileText, Send, Trash2, Upload } from 'lucide-react';
+import { ArrowLeft, Download, FileText, Pencil, Send, Trash2, Upload } from 'lucide-react';
 import { useAuth } from '@/context/auth-context';
 import { MAX_RECEIPTS, RECEIPT_ACCEPT, receiptFileError, uploadReceipt } from '@/lib/receipt-upload';
 import { openAttachment, useApiQuery, writeApi } from '@/lib/api-query';
@@ -18,8 +18,10 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Notice } from '@/components/common/notice';
+import { Field } from '@/components/common/field';
 import { Receipt } from '@/components/common/receipt';
 import { ReceiptPreview } from '@/components/common/receipt-preview';
+import { EditExpenseForm } from '@/components/common/edit-expense-form';
 import { StatusBadge } from '@/components/common/status-badge';
 import { CategoryTile } from '@/components/common/category-tile';
 import { ApprovalStepper } from '@/components/common/approval-stepper';
@@ -33,6 +35,7 @@ const WAITING_TEXT: Partial<Record<Expense['status'], string>> = {
   APPROVED: 'Approved. Waiting for finance to record payment.',
   PARTIALLY_PAID: 'Partly paid. Waiting for the balance.',
   PAID: 'Fully paid. Nothing left to do.',
+  REIMBURSEMENT_CANCELLED: 'No further reimbursement is due.',
   REJECTED: 'Rejected. The employee can revise it and resubmit.',
 };
 
@@ -64,6 +67,21 @@ export default function ExpenseDetailPage() {
   const [comment, setComment] = useState('');
   const [rejectReason, setRejectReason] = useState('');
   const [showReject, setShowReject] = useState(false);
+  const [showCancellation, setShowCancellation] = useState(false);
+  const [cancellationReason, setCancellationReason] = useState('');
+  const [editingId, setEditingId] = useState<string>();
+  const [expiredDeadline, setExpiredDeadline] = useState<string>();
+  const deadline = expense?.editableUntil ?? undefined;
+  const canEdit = Boolean(deadline && deadline !== expiredDeadline && Date.now() < Date.parse(deadline));
+
+  useEffect(() => {
+    if (!deadline) return;
+    const timeout = window.setTimeout(() => {
+      setExpiredDeadline(deadline);
+      setEditingId(undefined);
+    }, Math.max(0, Date.parse(deadline) - Date.now()));
+    return () => window.clearTimeout(timeout);
+  }, [deadline]);
 
   if (error) return <Notice kind="error">{error}</Notice>;
   if (!expense) return <div className="text-sm text-muted-foreground">Loading…</div>;
@@ -74,10 +92,13 @@ export default function ExpenseDetailPage() {
   const canApprove = can('expense.approve') && !isOwner && expense.status === 'SUBMITTED';
   const canReject = can('expense.reject') && !isOwner && expense.status === 'SUBMITTED';
   const showDecision = canApprove || canReject;
+  const reimbursementCancelled = expense.status === 'REIMBURSEMENT_CANCELLED';
+  const canCancelReimbursement = can('payment.record')
+    && (expense.status === 'APPROVED' || expense.status === 'PARTIALLY_PAID');
 
   const amount = Number(expense.amount);
   const paid = Number(expense.paidAmount);
-  const outstanding = amount - paid;
+  const outstanding = reimbursementCancelled ? 0 : amount - paid;
 
   const planned = !expense.approvals?.length;
   const steps: ApprovalStep[] = expense.approvals?.length
@@ -136,6 +157,18 @@ export default function ExpenseDetailPage() {
     run(() => uploadReceipt(expense.id, file), 'Receipt uploaded');
   };
 
+  const cancelReimbursement = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    void run(async () => {
+      await writeApi(`/expenses/${expense.id}/cancel-reimbursement`, {
+        method: 'POST',
+        json: { reason: cancellationReason.trim() },
+      });
+      setShowCancellation(false);
+      setCancellationReason('');
+    }, 'Reimbursement cancelled.');
+  };
+
   const actionHint = editable
     ? expense.status === 'REJECTED'
       ? 'Address the reason below, then resubmit.'
@@ -166,12 +199,36 @@ export default function ExpenseDetailPage() {
             </p>
           </div>
         </div>
-        <StatusBadge status={expense.status} />
+        <div className="flex items-center gap-3">
+          <StatusBadge status={expense.status} />
+          {canEdit && editingId !== expense.id && (
+            <Button type="button" variant="outline" onClick={() => setEditingId(expense.id)}>
+              <Pencil className="h-4 w-4" /> Edit expense
+            </Button>
+          )}
+        </div>
       </div>
 
       {feedback && <Notice kind={feedback.kind === 'ok' ? 'ok' : 'error'}>{feedback.text}</Notice>}
       {expense.status === 'REJECTED' && expense.rejectionReason && (
         <Notice kind="error">Rejected: {expense.rejectionReason}</Notice>
+      )}
+      {reimbursementCancelled && expense.reimbursementCancellationReason && (
+        <div className="rounded-lg border bg-muted/40 p-3 text-sm">
+          <p className="font-medium">Reimbursement cancellation reason</p>
+          <p className="mt-1 whitespace-pre-wrap break-words">{expense.reimbursementCancellationReason}</p>
+        </div>
+      )}
+      {canEdit && editingId === expense.id && (
+        <EditExpenseForm
+          key={expense.id}
+          expense={expense}
+          onCancel={() => setEditingId(undefined)}
+          onSave={() => {
+            setEditingId(undefined);
+            setFeedback({ kind: 'ok', text: 'Expense updated.' });
+          }}
+        />
       )}
 
       <div className="grid gap-6 lg:grid-cols-3">
@@ -246,6 +303,27 @@ export default function ExpenseDetailPage() {
                     </form>
                   )}
                 </div>
+              )}
+              {canCancelReimbursement && (
+                showCancellation ? (
+                  <form onSubmit={cancelReimbursement} className="space-y-3">
+                    <p className="text-sm text-muted-foreground">
+                      This cancels the unpaid balance of {money(outstanding, expense.currency)}. Recorded payments remain in the expense history.
+                    </p>
+                    <Field label="Cancellation reason" htmlFor="reimbursement-cancellation-reason">
+                      <Textarea id="reimbursement-cancellation-reason" required minLength={3} maxLength={500}
+                        value={cancellationReason} onChange={(e) => setCancellationReason(e.target.value)} />
+                    </Field>
+                    <div className="flex flex-wrap justify-end gap-2">
+                      <Button type="button" variant="outline" disabled={busy} onClick={() => setShowCancellation(false)}>Keep reimbursement</Button>
+                      <Button type="submit" variant="destructive" disabled={busy || cancellationReason.trim().length < 3}>Confirm cancellation</Button>
+                    </div>
+                  </form>
+                ) : (
+                  <Button type="button" variant="outline" className="w-full" disabled={busy} onClick={() => setShowCancellation(true)}>
+                    Cancel reimbursement
+                  </Button>
+                )
               )}
             </CardContent>
           </Card>
@@ -348,6 +426,9 @@ export default function ExpenseDetailPage() {
             lines={[
               { label: 'Category', value: label(expense.category) },
               { label: 'Expense date', value: formatDate(expense.expenseDate) },
+              { label: 'Told by', value: expense.toldBy || '—' },
+              { label: 'Reason', value: expense.reason || '—' },
+              { label: 'Paid to', value: expense.paidTo || '—' },
               {
                 label: 'Submitted',
                 value: expense.submittedAt ? formatDateTime(expense.submittedAt) : 'Not yet',
