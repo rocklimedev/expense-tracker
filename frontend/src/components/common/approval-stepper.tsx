@@ -10,7 +10,13 @@ export interface StepView {
 }
 
 /** Vertical approval chain. Shows what is done, what is waiting, and what comes next. */
-export function ApprovalStepper({ steps, planned = false }: { steps: StepView[]; planned?: boolean }) {
+export function ApprovalStepper({
+  steps,
+  planned = false,
+}: {
+  steps: StepView[];
+  planned?: boolean;
+}) {
   const currentIndex = steps.findIndex((s) => !s.status || s.status === 'PENDING');
 
   return (
@@ -23,14 +29,21 @@ export function ApprovalStepper({ steps, planned = false }: { steps: StepView[];
 
         let hint = 'Upcoming';
         if (planned) hint = 'Required approval';
-        else if (done) hint = step.actedAt ? `Approved ${formatDateTime(step.actedAt)}` : 'Approved';
+        else if (done)
+          hint = step.actedAt ? `Approved ${formatDateTime(step.actedAt)}` : 'Approved';
         else if (rejected) hint = 'Rejected at this step';
         else if (current) hint = 'Waiting for this approver';
 
         return (
           <li key={`${step.label}-${i}`} className="relative flex gap-4">
             {!last && (
-              <span className={cn('absolute left-[13px] top-7 -bottom-5 w-px', done ? 'bg-primary' : 'bg-border')} aria-hidden />
+              <span
+                className={cn(
+                  'absolute left-[13px] top-7 -bottom-5 w-px',
+                  done ? 'bg-primary' : 'bg-border',
+                )}
+                aria-hidden
+              />
             )}
             <span
               className={cn(
@@ -41,12 +54,20 @@ export function ApprovalStepper({ steps, planned = false }: { steps: StepView[];
                 !done && !rejected && !current && 'border-border text-muted-foreground',
               )}
             >
-              {done ? <Check className="h-3.5 w-3.5" /> : rejected ? <X className="h-3.5 w-3.5" /> : i + 1}
+              {done ? (
+                <Check className="h-3.5 w-3.5" />
+              ) : rejected ? (
+                <X className="h-3.5 w-3.5" />
+              ) : (
+                i + 1
+              )}
             </span>
             <div className="min-w-0 pt-0.5">
               <div className="text-sm font-medium">{step.label}</div>
               <div className="text-xs text-muted-foreground">{hint}</div>
-              {step.comment && <p className="mt-1 text-xs italic text-muted-foreground">“{step.comment}”</p>}
+              {step.comment && (
+                <p className="mt-1 text-xs italic text-muted-foreground">“{step.comment}”</p>
+              )}
             </div>
           </li>
         );

@@ -3,8 +3,9 @@ import { requestMessage, serverApi, type WriteOptions } from './server-api';
 import { store } from './store';
 
 export function useApiQuery<T>(path: string | null) {
-  const { currentData, error, isFetching, isUninitialized, refetch } =
-    serverApi.useReadQuery(path ?? skipToken);
+  const { currentData, error, isFetching, isUninitialized, refetch } = serverApi.useReadQuery(
+    path ?? skipToken,
+  );
   return {
     data: currentData as T | undefined,
     error: error ? requestMessage(error as FetchBaseQueryError) : null,
@@ -18,7 +19,9 @@ export function useApiQuery<T>(path: string | null) {
 // Supports sequenced writes such as creating a draft, uploading receipts, and submitting.
 export async function writeApi<T = unknown>(path: string, options: WriteOptions): Promise<T> {
   try {
-    return await store.dispatch(serverApi.endpoints.write.initiate({ path, ...options }, { track: false })).unwrap() as T;
+    return (await store
+      .dispatch(serverApi.endpoints.write.initiate({ path, ...options }, { track: false }))
+      .unwrap()) as T;
   } catch (error) {
     throw new Error(requestMessage(error as FetchBaseQueryError));
   }
@@ -26,7 +29,9 @@ export async function writeApi<T = unknown>(path: string, options: WriteOptions)
 
 export async function fetchAttachmentUrl(id: string, signal?: AbortSignal) {
   signal?.throwIfAborted();
-  const request = store.dispatch(serverApi.endpoints.downloadReceipt.initiate(id, { track: false }));
+  const request = store.dispatch(
+    serverApi.endpoints.downloadReceipt.initiate(id, { track: false }),
+  );
   const abort = () => request.abort();
   signal?.addEventListener('abort', abort, { once: true });
   try {

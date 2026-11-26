@@ -86,8 +86,8 @@ export default function PaymentsPage() {
         </div>
       )}
 
-      <div className="grid gap-6 lg:grid-cols-3">
-        <Card className="lg:col-span-1">
+      <div className="space-y-6">
+        <Card>
           <CardHeader>
             <CardTitle>Record payment</CardTitle>
             <CardDescription>
@@ -95,7 +95,7 @@ export default function PaymentsPage() {
             </CardDescription>
           </CardHeader>
           <form onSubmit={onSubmit}>
-            <CardContent className="space-y-4">
+            <CardContent className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <Field label="Claim">
                 <Select
                   required
@@ -143,14 +143,14 @@ export default function PaymentsPage() {
               </Field>
             </CardContent>
             <CardFooter>
-              <Button type="submit" className="w-full" disabled={busy || !expenseId}>
+              <Button type="submit" className="w-full sm:w-auto" disabled={busy || !expenseId}>
                 {busy ? 'Saving…' : 'Record payment'}
               </Button>
             </CardFooter>
           </form>
         </Card>
 
-        <Card className="lg:col-span-2">
+        <Card>
           <CardHeader>
             <CardTitle>Open claims</CardTitle>
             <CardDescription>Approved and partly paid, oldest first</CardDescription>

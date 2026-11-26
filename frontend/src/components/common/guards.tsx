@@ -10,7 +10,13 @@ export function RequireAuth({ children }: { children: ReactNode }) {
   return <>{children}</>;
 }
 
-export function RequirePermission({ permission, children }: { permission: string; children: ReactNode }) {
+export function RequirePermission({
+  permission,
+  children,
+}: {
+  permission: string;
+  children: ReactNode;
+}) {
   const { can } = useAuth();
   if (!can(permission)) {
     return (

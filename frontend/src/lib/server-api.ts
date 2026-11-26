@@ -49,9 +49,8 @@ export const serverApi = createApi({
   baseQuery: async (args: Parameters<typeof fetchJson>[0], api, options) => {
     const token = tokenStore.get();
     const result = await fetchJson(args, api, options);
-    const status = result.error?.status === 'PARSING_ERROR'
-      ? result.error.originalStatus
-      : result.error?.status;
+    const status =
+      result.error?.status === 'PARSING_ERROR' ? result.error.originalStatus : result.error?.status;
     if (status === 401 && api.endpoint !== 'login' && token && tokenStore.get() === token) {
       tokenStore.clear();
       if (window.location.pathname !== '/login') window.location.assign('/login');
@@ -77,7 +76,7 @@ export const serverApi = createApi({
       async queryFn(id, api, _options, baseQuery) {
         const result = await baseQuery({
           url: `/attachments/${id}/download`,
-          responseHandler: (response) => response.ok ? response.blob() : response.text(),
+          responseHandler: (response) => (response.ok ? response.blob() : response.text()),
         });
         if (result.error) return { error: result.error };
         if (api.signal.aborted || !(result.data instanceof Blob)) {

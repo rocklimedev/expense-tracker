@@ -1,7 +1,12 @@
 import { useState, type ChangeEvent, type FormEvent } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Plus, Send } from 'lucide-react';
-import { MAX_RECEIPTS, RECEIPT_ACCEPT, receiptFileError, uploadReceipt } from '@/lib/receipt-upload';
+import {
+  MAX_RECEIPTS,
+  RECEIPT_ACCEPT,
+  receiptFileError,
+  uploadReceipt,
+} from '@/lib/receipt-upload';
 import { categoryMeta } from '@/lib/category-meta';
 import { todayIso, daysAgoIso, label, money, formatDate } from '@/lib/format';
 import { useApiQuery, writeApi } from '@/lib/api-query';
@@ -15,7 +20,11 @@ import { Textarea } from '@/components/ui/textarea';
 import { Field } from '@/components/common/field';
 import { Notice } from '@/components/common/notice';
 import { ApprovalStepper } from '@/components/common/approval-stepper';
-import { ExpenseDetailsFields, emptyExpenseDetails, expenseDetailsPayload } from '@/components/common/expense-details-fields';
+import {
+  ExpenseDetailsFields,
+  emptyExpenseDetails,
+  expenseDetailsPayload,
+} from '@/components/common/expense-details-fields';
 
 const MAX_DESCRIPTION = 500;
 
@@ -171,14 +180,20 @@ export default function NewExpensePage() {
             Takes about a minute. Save it now, or submit for approval straight away.
           </p>
         </div>
-        <Button type="button" variant="outline" onClick={() => navigate('/expenses/batch')}>Batch entry</Button>
+        <Button type="button" variant="outline" onClick={() => navigate('/expenses/batch')}>
+          Batch entry
+        </Button>
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-5">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-5">
         <form onSubmit={onSubmit} className="lg:col-span-3">
           <Card>
-            <CardContent className="space-y-8 p-6 sm:p-8">
-              <fieldset aria-label="Expense details" disabled={Boolean(draftId || busy)} className="min-w-0 space-y-8">
+            <CardContent className="space-y-6 p-4 sm:space-y-8 sm:p-8">
+              <fieldset
+                aria-label="Expense details"
+                disabled={Boolean(draftId || busy)}
+                className="min-w-0 space-y-8"
+              >
                 <Field label="Amount" htmlFor="amount">
                   <div className="flex items-center gap-3 rounded-xl border border-input bg-background px-4 focus-within:ring-2 focus-within:ring-ring">
                     <span className="text-2xl font-medium text-muted-foreground">₹</span>
@@ -194,7 +209,7 @@ export default function NewExpensePage() {
                       aria-describedby="amount-hint"
                       value={amount}
                       onChange={(e) => setAmount(e.target.value)}
-                      className="h-16 w-full bg-transparent text-3xl font-semibold tabular-nums placeholder:text-muted-foreground/50 focus:outline-none"
+                      className="h-16 w-full min-w-0 bg-transparent text-3xl font-semibold tabular-nums placeholder:text-muted-foreground/50 focus:outline-none"
                     />
                   </div>
                   <p id="amount-hint" className="text-xs text-muted-foreground">
@@ -303,7 +318,7 @@ export default function NewExpensePage() {
                   )}
                 </fieldset>
 
-                <div className="grid gap-6 sm:grid-cols-2">
+                <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
                   <Field label="Date">
                     <Input
                       type="date"
@@ -348,7 +363,11 @@ export default function NewExpensePage() {
                     {description.length}/{MAX_DESCRIPTION}
                   </div>
                 </Field>
-                <ExpenseDetailsFields id="new-expense" value={expenseDetails} onChange={setExpenseDetails} />
+                <ExpenseDetailsFields
+                  id="new-expense"
+                  value={expenseDetails}
+                  onChange={setExpenseDetails}
+                />
               </fieldset>
 
               <Field label="Receipts (optional)" htmlFor="expense-receipts">
@@ -398,12 +417,15 @@ export default function NewExpensePage() {
               {draftId && !busy && (
                 <p className="text-sm text-muted-foreground">
                   Your draft is saved. Retry here or{' '}
-                  <Link className="underline" to={`/expenses/${draftId}`}>open the draft</Link>.
+                  <Link className="underline" to={`/expenses/${draftId}`}>
+                    open the draft
+                  </Link>
+                  .
                 </p>
               )}
             </CardContent>
 
-            <CardFooter className="justify-end border-t bg-muted/30 p-6">
+            <CardFooter className="justify-end border-t bg-muted/30 p-4 sm:p-6">
               <div className="flex w-full flex-col-reverse gap-2 sm:w-auto sm:flex-row">
                 <Button
                   type="submit"

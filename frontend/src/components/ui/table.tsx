@@ -2,7 +2,12 @@ import * as React from 'react';
 import { cn } from '@/lib/utils';
 
 export const Table = ({ className, ...props }: React.TableHTMLAttributes<HTMLTableElement>) => (
-  <div className="relative w-full overflow-auto">
+  <div
+    role="region"
+    aria-label={props['aria-label'] || 'Scrollable table'}
+    tabIndex={0}
+    className="relative w-full min-w-0 overflow-x-auto focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ring"
+  >
     <table className={cn('w-full caption-bottom text-sm', className)} {...props} />
   </div>
 );

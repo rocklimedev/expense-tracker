@@ -89,7 +89,7 @@ export default function App() {
           path="permissions-matrix"
           element={
             <RequirePermission permission="role.manage">
-              <RolesPage matrix />
+              <Navigate to="/roles" replace />
             </RequirePermission>
           }
         />

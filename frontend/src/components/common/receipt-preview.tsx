@@ -10,7 +10,8 @@ export function ReceiptPreview({ attachment }: { attachment: Attachment }) {
   const viewer = useRef<HTMLDialogElement>(null);
   const isPdf = attachment.mimeType === 'application/pdf';
   const canPreviewPdf = navigator.pdfViewerEnabled !== false;
-  const canPreview = isPdf || ['image/jpeg', 'image/png', 'image/webp'].includes(attachment.mimeType);
+  const canPreview =
+    isPdf || ['image/jpeg', 'image/png', 'image/webp'].includes(attachment.mimeType);
 
   useEffect(() => {
     if (!canPreview) return;
@@ -37,10 +38,18 @@ export function ReceiptPreview({ attachment }: { attachment: Attachment }) {
   }, [attachment.id, canPreview]);
 
   if (failed || !canPreview) {
-    return <p className="p-3 text-xs text-muted-foreground">Preview unavailable. Use Open to view the receipt.</p>;
+    return (
+      <p className="p-3 text-xs text-muted-foreground">
+        Preview unavailable. Use Open to view the receipt.
+      </p>
+    );
   }
   if (!url) {
-    return <p role="status" className="p-3 text-xs text-muted-foreground">Loading receipt preview…</p>;
+    return (
+      <p role="status" className="p-3 text-xs text-muted-foreground">
+        Loading receipt preview…
+      </p>
+    );
   }
 
   return (
@@ -70,9 +79,7 @@ export function ReceiptPreview({ attachment }: { attachment: Attachment }) {
           className="absolute inset-0 w-full cursor-zoom-in rounded-sm focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ring"
           onClick={() => viewer.current?.showModal()}
         />
-        {isPdf && !canPreviewPdf && (
-          <p className="p-3 text-center text-sm font-medium">View PDF</p>
-        )}
+        {isPdf && !canPreviewPdf && <p className="p-3 text-center text-sm font-medium">View PDF</p>}
       </div>
 
       <dialog
@@ -96,18 +103,32 @@ export function ReceiptPreview({ attachment }: { attachment: Attachment }) {
           </Button>
         </div>
         {isPdf && canPreviewPdf && (
-          <iframe title={attachment.originalName} src={url} loading="lazy" className="block h-[72dvh] w-full" />
+          <iframe
+            title={attachment.originalName}
+            src={url}
+            loading="lazy"
+            className="block h-[72dvh] w-full"
+          />
         )}
         {isPdf && !canPreviewPdf && (
           <div className="space-y-3 p-4 text-sm">
             <p>This browser opens PDFs in a separate tab.</p>
-            <a href={url} target="_blank" rel="noopener noreferrer" className="font-medium underline">
+            <a
+              href={url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="font-medium underline"
+            >
               Open PDF
             </a>
           </div>
         )}
         {!isPdf && (
-          <img src={url} alt={attachment.originalName} className="max-h-[72dvh] w-full object-contain" />
+          <img
+            src={url}
+            alt={attachment.originalName}
+            className="max-h-[72dvh] w-full object-contain"
+          />
         )}
       </dialog>
     </>

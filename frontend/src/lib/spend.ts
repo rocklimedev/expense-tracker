@@ -6,8 +6,10 @@ const SPEND_STATUSES = ['SUBMITTED', 'APPROVED', 'PARTIALLY_PAID', 'PAID'];
 export const num = (v: number | string | null | undefined) => Number(v ?? 0);
 
 export function isSpend(e: Expense) {
-  return SPEND_STATUSES.includes(e.status)
-    || (e.status === 'REIMBURSEMENT_CANCELLED' && num(e.paidAmount) > 0);
+  return (
+    SPEND_STATUSES.includes(e.status) ||
+    (e.status === 'REIMBURSEMENT_CANCELLED' && num(e.paidAmount) > 0)
+  );
 }
 
 export function spendAmount(e: Expense) {

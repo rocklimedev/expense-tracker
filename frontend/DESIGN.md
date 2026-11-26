@@ -35,3 +35,11 @@ The app had been laid out like a sales CRM: status tabs, stat tiles and tables o
 - **A claim is a receipt.** The amount sits on a paper-style card with line items, a dashed tear line and a payment bar. The title is what the money was for.
 - **Navigation uses money words.** Trackers are now Budgets, Approvals is To approve, Payments is Reimbursements, Policies is Approval rules, and Users is Team. The sidebar is dark and has a New expense button.
 - **Categories have colours.** Each category has a solid bar colour for the breakdown, alongside its icon.
+
+## Round 4: simpler and calmer
+- **Expenses home is one screen with three parts.** The month's total, two tappable attention tiles (awaiting approval, to be reimbursed), then the transaction list. Search and three filters: All, Needs attention, Paid.
+- **Breakdown is secondary.** "Where it went" (six-month bars and category split) is a closed disclosure under the total, so employees without access to Reports can still see it.
+- **Fewer entry points.** The header button is gone. New expense lives in the sidebar on desktop and as a floating button on phones. Batch entry is a secondary action on the New expense page.
+- **Lighter surfaces.** Cards have no border and use a soft shadow on a warm canvas. The sidebar is light, with sentence-case group labels.
+- **Three status meanings.** Waiting (amber), settled (green), neutral (grey), plus rejected (red). No status dots.
+- **Expense detail.** The claim total and the next step come first. Approval chain and receipts stay visible. Activity is a closed disclosure with an event count. Boxes use the same softer corners as the rest of the app.

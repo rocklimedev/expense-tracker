@@ -6,10 +6,11 @@ import {
   NotFoundException,
   OnModuleInit,
 } from '@nestjs/common';
-import { Op, Transaction, UniqueConstraintError } from 'sequelize';
+import { ForeignKeyConstraintError, Op, Transaction, UniqueConstraintError } from 'sequelize';
 import { Sequelize } from 'sequelize-typescript';
 import { Permissions } from '../common/permissions';
 import { AuthUser } from '../common/types';
+import { User } from '../users/models/user.model';
 import { RbacPermission } from './models/permission.model';
 import { RolePermission } from './models/role-permission.model';
 import { Role } from './models/role.model';
@@ -87,6 +88,43 @@ export class RbacService implements OnModuleInit {
     } catch (error) {
       if (error instanceof UniqueConstraintError)
         throw new ConflictException('Role name already exists');
+      throw error;
+    }
+  }
+
+  async renameRole(roleId: string, name: string, actor: AuthUser) {
+    try {
+      await this.sequelize.transaction(async (transaction) => {
+        await this.requireRoleManager(actor, transaction);
+        const role = await Role.findByPk(roleId, { transaction });
+        if (!role) throw new NotFoundException('Role not found');
+        await role.update({ name }, { transaction });
+      });
+    } catch (error) {
+      if (error instanceof UniqueConstraintError)
+        throw new ConflictException('Role name already exists');
+      throw error;
+    }
+  }
+
+  async deleteRole(roleId: string, actor: AuthUser) {
+    const assignedMessage = 'This role is assigned to a user account and cannot be deleted.';
+    try {
+      await this.sequelize.transaction(async (transaction) => {
+        await this.requireRoleManager(actor, transaction);
+        if (roleId === actor.roleId) {
+          throw new BadRequestException('You cannot delete your own role');
+        }
+        const role = await Role.findByPk(roleId, { transaction });
+        if (!role) throw new NotFoundException('Role not found');
+        if (await User.findOne({ attributes: ['id'], where: { roleId }, transaction })) {
+          throw new ConflictException(assignedMessage);
+        }
+        await RolePermission.destroy({ where: { roleId }, transaction });
+        await role.destroy({ transaction });
+      });
+    } catch (error) {
+      if (error instanceof ForeignKeyConstraintError) throw new ConflictException(assignedMessage);
       throw error;
     }
   }

@@ -4,7 +4,6 @@ import {
   Banknote,
   ChartNoAxesColumn,
   ClipboardCheck,
-  Grid2X2,
   LogOut,
   Menu,
   PiggyBank,
@@ -64,11 +63,10 @@ const GROUPS: { title: string; items: NavItem[] }[] = [
         perms: ['approval.policy.manage'],
       },
       { to: '/users', label: 'Team', icon: Users, perms: ['user.manage'] },
-      { to: '/roles', label: 'Roles', icon: UserRoundCog, perms: ['role.manage'] },
       {
-        to: '/permissions-matrix',
-        label: 'Permissions matrix',
-        icon: Grid2X2,
+        to: '/roles',
+        label: 'Roles & Permissions',
+        icon: UserRoundCog,
         perms: ['role.manage'],
       },
     ],
@@ -116,8 +114,8 @@ function Nav({
         <div key={group.title}>
           <div
             className={cn(
-              'px-3 pb-2 text-[11px] font-semibold uppercase tracking-wider',
-              dark ? 'text-slate-500' : 'text-muted-foreground',
+              'px-3 pb-2 text-xs font-medium text-muted-foreground',
+              'text-muted-foreground',
             )}
           >
             {group.title}
@@ -130,7 +128,7 @@ function Nav({
                 onClick={onNavigate}
                 className={({ isActive }) =>
                   cn(
-                    'flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors',
+                    'flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors',
                     dark
                       ? isActive
                         ? 'bg-white/10 text-white'
@@ -232,11 +230,14 @@ export function AppLayout() {
     items: g.items.filter((i) => i.perms.some((p) => can(p))),
   })).filter((g) => g.items.length > 0);
   const mobileTabs = [
-    ...groups.flatMap((g) => g.items).slice(0, 4).map(({ to, label, icon }) => ({
-      to,
-      label: to === '/payments' ? 'Payments' : label,
-      icon,
-    })),
+    ...groups
+      .flatMap((g) => g.items)
+      .slice(0, 4)
+      .map(({ to, label, icon }) => ({
+        to,
+        label: to === '/payments' ? 'Payments' : label,
+        icon,
+      })),
     { to: '/profile', label: 'Profile', icon: UserRound },
   ];
   const initials = (user?.name ?? '?')
@@ -257,21 +258,21 @@ export function AppLayout() {
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Desktop sidebar: dark, so the page content reads as the main thing. */}
-      <aside className="fixed inset-y-0 left-0 z-30 hidden w-64 flex-col bg-slate-950 lg:flex">
+      {/* Desktop sidebar: light and quiet, so the page content is the main thing. */}
+      <aside className="fixed inset-y-0 left-0 z-30 hidden w-64 flex-col border-r bg-card lg:flex">
         <div className="px-5 py-6">
-          <Brand dark />
+          <Brand />
         </div>
         {can('expense.create') && (
           <Link
             to="/expenses/new"
-            className="mx-3 mb-6 flex items-center justify-center gap-2 rounded-xl bg-teal-400 px-4 py-2.5 text-sm font-semibold text-slate-950 transition-colors hover:bg-teal-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-200"
+            className="mx-3 mb-6 flex items-center justify-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground shadow-sm transition-colors hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           >
             <Plus className="h-4 w-4" /> New expense
           </Link>
         )}
-        <Nav groups={groups} dark />
-        <UserCard dark initials={initials} name={user?.name} role={roleName} onSignOut={signOut} />
+        <Nav groups={groups} />
+        <UserCard initials={initials} name={user?.name} role={roleName} onSignOut={signOut} />
       </aside>
 
       {/* Mobile top bar */}
@@ -281,7 +282,9 @@ export function AppLayout() {
           type="button"
           onClick={() => setMenuOpen((v) => !v)}
           aria-label={menuOpen ? 'Close menu' : 'Open menu'}
-          className="rounded-md p-2 text-muted-foreground hover:bg-muted"
+          aria-expanded={menuOpen}
+          aria-controls={menuOpen ? 'mobile-menu' : undefined}
+          className="flex h-11 w-11 items-center justify-center rounded-md text-muted-foreground hover:bg-muted"
         >
           {menuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
         </button>
@@ -289,7 +292,19 @@ export function AppLayout() {
 
       {/* Mobile full menu */}
       {menuOpen && (
-        <div className="fixed inset-x-0 bottom-0 top-14 z-20 flex flex-col bg-card lg:hidden">
+        <div
+          id="mobile-menu"
+          className="fixed inset-x-0 bottom-0 top-14 z-30 flex flex-col bg-card pb-[env(safe-area-inset-bottom)] lg:hidden"
+        >
+          {can('expense.create') && (
+            <Link
+              to="/expenses/new"
+              onClick={() => setMenuOpen(false)}
+              className="mx-3 my-2 flex min-h-11 shrink-0 items-center justify-center gap-2 rounded-xl bg-primary px-4 text-sm font-semibold text-primary-foreground"
+            >
+              <Plus className="h-4 w-4" /> New expense
+            </Link>
+          )}
           <Nav groups={groups} onNavigate={() => setMenuOpen(false)} />
           <UserCard
             initials={initials}
@@ -303,7 +318,10 @@ export function AppLayout() {
 
       <nav
         aria-label="Mobile navigation"
-        className="fixed inset-x-0 bottom-0 z-30 grid border-t bg-card/95 pb-[env(safe-area-inset-bottom)] backdrop-blur lg:hidden"
+        className={cn(
+          'fixed inset-x-0 bottom-0 z-30 grid border-t bg-card/95 pb-[env(safe-area-inset-bottom)] backdrop-blur lg:hidden',
+          menuOpen && 'hidden',
+        )}
         style={{ gridTemplateColumns: `repeat(${mobileTabs.length}, minmax(0, 1fr))` }}
       >
         {mobileTabs.map(({ to, label, icon: Icon }) => (
@@ -313,7 +331,7 @@ export function AppLayout() {
             onClick={() => setMenuOpen(false)}
             className={({ isActive }) =>
               cn(
-                'flex flex-col items-center gap-1 py-2.5 text-[11px] font-medium transition-colors',
+                'flex flex-col items-center gap-1 px-0.5 py-2.5 text-center text-[11px] font-medium leading-tight transition-colors',
                 isActive ? 'text-primary' : 'text-muted-foreground',
               )
             }
@@ -324,7 +342,7 @@ export function AppLayout() {
         ))}
       </nav>
 
-      <main className="px-4 pb-28 pt-6 sm:px-6 lg:ml-64 lg:px-10 lg:pb-12 lg:pt-10">
+      <main className="px-3 pb-[calc(7rem_+_env(safe-area-inset-bottom))] pt-5 sm:px-6 lg:ml-64 lg:px-6 xl:px-10 lg:pb-12 lg:pt-10">
         <div className="mx-auto max-w-6xl">
           <Outlet />
         </div>

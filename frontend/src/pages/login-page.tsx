@@ -37,7 +37,7 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="grid min-h-screen bg-background lg:grid-cols-2">
+    <div className="grid min-h-dvh bg-background lg:grid-cols-2">
       <aside className="hidden flex-col justify-between bg-primary p-12 text-primary-foreground lg:flex">
         <div className="flex items-center gap-2.5 font-semibold">
           <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-white/15">
@@ -65,7 +65,7 @@ export default function LoginPage() {
         </p>
       </aside>
 
-      <main className="flex items-center justify-center p-6 sm:p-12">
+      <main className="flex items-center justify-center p-4 sm:p-12">
         <div className="w-full max-w-sm">
           <div className="mb-8 flex items-center gap-2.5 font-semibold lg:hidden">
             <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
@@ -125,7 +125,11 @@ export default function LoginPage() {
           >
             Forgot password?
           </button>
-          <p id="password-reset-help" hidden={!showResetHelp} className="mt-2 text-sm text-muted-foreground">
+          <p
+            id="password-reset-help"
+            hidden={!showResetHelp}
+            className="mt-2 text-sm text-muted-foreground"
+          >
             Ask your team administrator to reset your password from the Team page.
           </p>
         </div>

@@ -62,7 +62,10 @@ export default function ApprovalsPage() {
   async function approveOne(id: string) {
     await run(
       () =>
-        writeApi(`/expenses/${id}/approve`, { method: 'POST', json: { comment: comment || undefined } }),
+        writeApi(`/expenses/${id}/approve`, {
+          method: 'POST',
+          json: { comment: comment || undefined },
+        }),
       'Approved',
     );
   }
@@ -72,7 +75,10 @@ export default function ApprovalsPage() {
     if (rejectingId === null) return;
     await run(
       () =>
-        writeApi(`/expenses/${rejectingId}/reject`, { method: 'POST', json: { reason: rejectReason } }),
+        writeApi(`/expenses/${rejectingId}/reject`, {
+          method: 'POST',
+          json: { reason: rejectReason },
+        }),
       'Rejected',
     );
     setRejectingId(null);
@@ -244,7 +250,7 @@ export default function ApprovalsPage() {
                   {rejectingId === item.id && (
                     <TableRow>
                       <TableCell colSpan={8}>
-                        <form onSubmit={rejectOne} className="flex items-start gap-2">
+                        <form onSubmit={rejectOne} className="flex flex-wrap items-start gap-2">
                           <Textarea
                             required
                             minLength={3}

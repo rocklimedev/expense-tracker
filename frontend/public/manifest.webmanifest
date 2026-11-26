@@ -1,0 +1,16 @@
+{
+  "id": "./",
+  "name": "Expense Tracker",
+  "short_name": "Expenses",
+  "description": "Track expenses, approvals, reimbursements, and budgets.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "theme_color": "#0f766e",
+  "background_color": "#fbfaf8",
+  "icons": [
+    { "src": "icons/expense-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icons/expense-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icons/expense-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

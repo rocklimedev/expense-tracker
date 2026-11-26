@@ -1,5 +1,9 @@
 import { useState, type FormEvent } from 'react';
-import { ExpenseDetailsFields, existingExpenseDetails, expenseDetailsPayload } from './expense-details-fields';
+import {
+  ExpenseDetailsFields,
+  existingExpenseDetails,
+  expenseDetailsPayload,
+} from './expense-details-fields';
 import { Field } from './field';
 import { Notice } from './notice';
 import { Button } from '@/components/ui/button';
@@ -11,7 +15,11 @@ import { useApiQuery, writeApi } from '@/lib/api-query';
 import { label } from '@/lib/format';
 import type { Expense, ExpenseCategory } from '@/lib/types';
 
-export function EditExpenseForm({ expense, onSave, onCancel }: {
+export function EditExpenseForm({
+  expense,
+  onSave,
+  onCancel,
+}: {
   expense: Expense;
   onSave: () => void;
   onCancel: () => void;
@@ -51,7 +59,9 @@ export function EditExpenseForm({ expense, onSave, onCancel }: {
 
   return (
     <Card>
-      <CardHeader><CardTitle>Edit expense</CardTitle></CardHeader>
+      <CardHeader>
+        <CardTitle>Edit expense</CardTitle>
+      </CardHeader>
       <CardContent>
         <form onSubmit={save} className="space-y-4">
           <fieldset disabled={saving} aria-label="Expense details" className="min-w-0 space-y-4">
@@ -61,26 +71,53 @@ export function EditExpenseForm({ expense, onSave, onCancel }: {
                   {!categories.data?.some(({ code }) => code === expense.category) && (
                     <option value={expense.category}>{label(expense.category)}</option>
                   )}
-                  {categories.data?.map(({ code }) => <option key={code} value={code}>{label(code)}</option>)}
+                  {categories.data?.map(({ code }) => (
+                    <option key={code} value={code}>
+                      {label(code)}
+                    </option>
+                  ))}
                 </Select>
               </Field>
               <Field label={`Amount (${expense.currency})`}>
-                <Input required type="number" min="0.01" max="9999999999.99" step="0.01" inputMode="decimal"
-                  value={amount} onChange={(e) => setAmount(e.target.value)} />
+                <Input
+                  required
+                  type="number"
+                  min="0.01"
+                  max="9999999999.99"
+                  step="0.01"
+                  inputMode="decimal"
+                  value={amount}
+                  onChange={(e) => setAmount(e.target.value)}
+                />
               </Field>
               <Field label="Expense date">
-                <Input required type="date" readOnly={Boolean(expense.scheduleId)} value={date} onChange={(e) => setDate(e.target.value)} />
+                <Input
+                  required
+                  type="date"
+                  readOnly={Boolean(expense.scheduleId)}
+                  value={date}
+                  onChange={(e) => setDate(e.target.value)}
+                />
               </Field>
             </div>
             <Field label="Description">
-              <Textarea rows={2} maxLength={500} value={description} onChange={(e) => setDescription(e.target.value)} />
+              <Textarea
+                rows={2}
+                maxLength={500}
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+              />
             </Field>
             <ExpenseDetailsFields id="edit-expense" value={details} onChange={setDetails} />
           </fieldset>
           {error && <Notice kind="error">{error}</Notice>}
           <div className="flex justify-end gap-2">
-            <Button type="button" variant="outline" disabled={saving} onClick={onCancel}>Cancel</Button>
-            <Button type="submit" disabled={saving}>{saving ? 'Saving…' : 'Save changes'}</Button>
+            <Button type="button" variant="outline" disabled={saving} onClick={onCancel}>
+              Cancel
+            </Button>
+            <Button type="submit" disabled={saving}>
+              {saving ? 'Saving…' : 'Save changes'}
+            </Button>
           </div>
         </form>
       </CardContent>

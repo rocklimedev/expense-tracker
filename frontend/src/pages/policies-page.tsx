@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from 'react';
+import { useRef, useState, type FormEvent } from 'react';
 import { Plus, Trash2 } from 'lucide-react';
 import { useApiQuery, writeApi } from '@/lib/api-query';
 import { money, label } from '@/lib/format';
@@ -44,6 +44,8 @@ export default function PoliciesPage() {
     { label: 'CA review', requiredPermission: 'expense.approve' },
   ]);
   const [busy, setBusy] = useState(false);
+  const policyDialog = useRef<HTMLDialogElement>(null);
+  const [createError, setCreateError] = useState<string>();
   const [message, setMessage] = useState<{ kind: 'ok' | 'error'; text: string } | null>(null);
 
   const updateStep = (i: number, patch: Partial<StepDraft>) =>
@@ -51,8 +53,10 @@ export default function PoliciesPage() {
 
   async function onCreate(e: FormEvent) {
     e.preventDefault();
+    if (busy) return;
     setBusy(true);
     setMessage(null);
+    setCreateError(undefined);
     try {
       await writeApi('/approval-policies', {
         method: 'POST',
@@ -69,9 +73,13 @@ export default function PoliciesPage() {
         text: 'Policy created. It applies to claims submitted from now on.',
       });
       setName('');
+      setCategory('');
+      setMinAmount('0');
+      setPriority('0');
       setSteps([{ label: 'CA review', requiredPermission: 'expense.approve' }]);
+      policyDialog.current?.close();
     } catch (err) {
-      setMessage({ kind: 'error', text: (err as Error).message });
+      setCreateError((err as Error).message);
     } finally {
       setBusy(false);
     }
@@ -91,6 +99,11 @@ export default function PoliciesPage() {
       <PageHeader
         title="Approval rules"
         description="Decide which approval chain a claim needs, based on amount and category. The highest priority match wins."
+        actions={
+          <Button type="button" onClick={() => policyDialog.current?.showModal()}>
+            <Plus className="h-4 w-4" /> Add Policy
+          </Button>
+        }
       />
 
       {error && (
@@ -104,8 +117,8 @@ export default function PoliciesPage() {
         </div>
       )}
 
-      <div className="grid gap-6 lg:grid-cols-3">
-        <Card className="lg:col-span-2">
+      <div>
+        <Card>
           <CardHeader>
             <CardTitle>Policies</CardTitle>
           </CardHeader>
@@ -157,10 +170,16 @@ export default function PoliciesPage() {
           </CardContent>
         </Card>
 
-        <Card>
+        <dialog
+          ref={policyDialog}
+          aria-labelledby="new-policy-title"
+          className="m-auto max-h-[calc(100dvh_-_2rem)] w-[calc(100%_-_2rem)] max-w-lg overflow-y-auto rounded-xl border bg-card text-card-foreground shadow-xl backdrop:bg-black/60"
+          onCancel={(e) => { if (busy) e.preventDefault(); }}
+          onClose={() => setCreateError(undefined)}
+        >
           <form onSubmit={onCreate}>
             <CardHeader>
-              <CardTitle>New policy</CardTitle>
+              <CardTitle id="new-policy-title">New policy</CardTitle>
               <CardDescription>Steps run in the order listed.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-3">
@@ -213,14 +232,17 @@ export default function PoliciesPage() {
               <div className="space-y-2">
                 <div className="text-sm font-medium">Approval steps</div>
                 {steps.map((s, i) => (
-                  <div key={i} className="flex items-center gap-2">
+                  <div key={i} className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-2 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto]">
                     <Input
                       required
                       placeholder="Step label"
+                      aria-label={`Step ${i + 1} label`}
+                      className="col-span-2 sm:col-span-1"
                       value={s.label}
                       onChange={(e) => updateStep(i, { label: e.target.value })}
                     />
                     <Select
+                      aria-label={`Step ${i + 1} permission`}
                       value={s.requiredPermission}
                       onChange={(e) => updateStep(i, { requiredPermission: e.target.value })}
                     >
@@ -234,6 +256,7 @@ export default function PoliciesPage() {
                       type="button"
                       variant="ghost"
                       size="icon"
+                      aria-label={`Remove step ${i + 1}`}
                       disabled={steps.length === 1}
                       onClick={() => setSteps((prev) => prev.filter((_, idx) => idx !== i))}
                     >
@@ -256,14 +279,18 @@ export default function PoliciesPage() {
                   <Plus className="h-3.5 w-3.5" /> Add step
                 </Button>
               </div>
+              {createError && <Notice kind="error">{createError}</Notice>}
             </CardContent>
-            <CardFooter>
-              <Button type="submit" className="w-full" disabled={busy || !categories.data}>
+            <CardFooter className="justify-end">
+              <Button type="button" variant="outline" disabled={busy} onClick={() => policyDialog.current?.close()}>
+                Cancel
+              </Button>
+              <Button type="submit" disabled={busy || !categories.data}>
                 {busy ? 'Saving…' : 'Create policy'}
               </Button>
             </CardFooter>
           </form>
-        </Card>
+        </dialog>
       </div>
     </>
   );

@@ -1,4 +1,11 @@
-import { Children, cloneElement, isValidElement, useId, type ReactElement, type ReactNode } from 'react';
+import {
+  Children,
+  cloneElement,
+  isValidElement,
+  useId,
+  type ReactElement,
+  type ReactNode,
+} from 'react';
 import { Label } from '@/components/ui/label';
 
 const LABELABLE = ['input', 'select', 'textarea'];

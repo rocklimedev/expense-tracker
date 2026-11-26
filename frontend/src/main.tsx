@@ -7,6 +7,12 @@ import { AuthProvider } from './context/auth-context';
 import { store } from './lib/store';
 import './index.css';
 
+if (import.meta.env.PROD && 'serviceWorker' in navigator) {
+  void navigator.serviceWorker.register(`${import.meta.env.BASE_URL}sw.js`).catch((error) => {
+    console.warn('Could not register the offline service worker.', error);
+  });
+}
+
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
     <BrowserRouter>

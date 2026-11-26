@@ -1,8 +1,13 @@
 import { useEffect, useState, type ChangeEvent, type FormEvent } from 'react';
 import { Link, useLocation, useParams } from 'react-router-dom';
-import { ArrowLeft, Download, FileText, Pencil, Send, Trash2, Upload } from 'lucide-react';
+import { ArrowLeft, ChevronDown, Download, FileText, Pencil, Send, Trash2, Upload } from 'lucide-react';
 import { useAuth } from '@/context/auth-context';
-import { MAX_RECEIPTS, RECEIPT_ACCEPT, receiptFileError, uploadReceipt } from '@/lib/receipt-upload';
+import {
+  MAX_RECEIPTS,
+  RECEIPT_ACCEPT,
+  receiptFileError,
+  uploadReceipt,
+} from '@/lib/receipt-upload';
 import { openAttachment, useApiQuery, writeApi } from '@/lib/api-query';
 import { money, formatDate, formatDateTime, label } from '@/lib/format';
 import type { ApprovalStep, Attachment, Expense, Payment } from '@/lib/types';
@@ -45,9 +50,7 @@ export default function ExpenseDetailPage() {
   const { user, can } = useAuth();
 
   const { data: expense, error } = useApiQuery<Expense>(`/expenses/${expenseId}`);
-  const { data: attachments } = useApiQuery<Attachment[]>(
-    `/expenses/${expenseId}/attachments`,
-  );
+  const { data: attachments } = useApiQuery<Attachment[]>(`/expenses/${expenseId}/attachments`);
   const { data: payments } = useApiQuery<Payment[]>(
     can('payment.record') ? `/expenses/${expenseId}/payments` : null,
   );
@@ -72,14 +75,19 @@ export default function ExpenseDetailPage() {
   const [editingId, setEditingId] = useState<string>();
   const [expiredDeadline, setExpiredDeadline] = useState<string>();
   const deadline = expense?.editableUntil ?? undefined;
-  const canEdit = Boolean(deadline && deadline !== expiredDeadline && Date.now() < Date.parse(deadline));
+  const canEdit = Boolean(
+    deadline && deadline !== expiredDeadline && Date.now() < Date.parse(deadline),
+  );
 
   useEffect(() => {
     if (!deadline) return;
-    const timeout = window.setTimeout(() => {
-      setExpiredDeadline(deadline);
-      setEditingId(undefined);
-    }, Math.max(0, Date.parse(deadline) - Date.now()));
+    const timeout = window.setTimeout(
+      () => {
+        setExpiredDeadline(deadline);
+        setEditingId(undefined);
+      },
+      Math.max(0, Date.parse(deadline) - Date.now()),
+    );
     return () => window.clearTimeout(timeout);
   }, [deadline]);
 
@@ -93,8 +101,8 @@ export default function ExpenseDetailPage() {
   const canReject = can('expense.reject') && !isOwner && expense.status === 'SUBMITTED';
   const showDecision = canApprove || canReject;
   const reimbursementCancelled = expense.status === 'REIMBURSEMENT_CANCELLED';
-  const canCancelReimbursement = can('payment.record')
-    && (expense.status === 'APPROVED' || expense.status === 'PARTIALLY_PAID');
+  const canCancelReimbursement =
+    can('payment.record') && (expense.status === 'APPROVED' || expense.status === 'PARTIALLY_PAID');
 
   const amount = Number(expense.amount);
   const paid = Number(expense.paidAmount);
@@ -121,7 +129,10 @@ export default function ExpenseDetailPage() {
   }
 
   const submit = () =>
-    run(() => writeApi(`/expenses/${expense.id}/submit`, { method: 'POST' }), 'Submitted for approval');
+    run(
+      () => writeApi(`/expenses/${expense.id}/submit`, { method: 'POST' }),
+      'Submitted for approval',
+    );
 
   const approve = () =>
     run(
@@ -137,7 +148,10 @@ export default function ExpenseDetailPage() {
     e.preventDefault();
     run(
       () =>
-        writeApi(`/expenses/${expense.id}/reject`, { method: 'POST', json: { reason: rejectReason } }),
+        writeApi(`/expenses/${expense.id}/reject`, {
+          method: 'POST',
+          json: { reason: rejectReason },
+        }),
       'Expense rejected',
     ).then(() => {
       setShowReject(false);
@@ -199,7 +213,7 @@ export default function ExpenseDetailPage() {
             </p>
           </div>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-3">
           <StatusBadge status={expense.status} />
           {canEdit && editingId !== expense.id && (
             <Button type="button" variant="outline" onClick={() => setEditingId(expense.id)}>
@@ -214,9 +228,11 @@ export default function ExpenseDetailPage() {
         <Notice kind="error">Rejected: {expense.rejectionReason}</Notice>
       )}
       {reimbursementCancelled && expense.reimbursementCancellationReason && (
-        <div className="rounded-lg border bg-muted/40 p-3 text-sm">
+        <div className="rounded-xl bg-muted/50 p-4 text-sm">
           <p className="font-medium">Reimbursement cancellation reason</p>
-          <p className="mt-1 whitespace-pre-wrap break-words">{expense.reimbursementCancellationReason}</p>
+          <p className="mt-1 whitespace-pre-wrap break-words">
+            {expense.reimbursementCancellationReason}
+          </p>
         </div>
       )}
       {canEdit && editingId === expense.id && (
@@ -231,7 +247,7 @@ export default function ExpenseDetailPage() {
         />
       )}
 
-      <div className="grid gap-6 lg:grid-cols-3">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
         {/* Next-step panel comes first on mobile, last-in-column on desktop. */}
         <aside className="order-first space-y-6 lg:order-last">
           <Card>
@@ -304,27 +320,52 @@ export default function ExpenseDetailPage() {
                   )}
                 </div>
               )}
-              {canCancelReimbursement && (
-                showCancellation ? (
+              {canCancelReimbursement &&
+                (showCancellation ? (
                   <form onSubmit={cancelReimbursement} className="space-y-3">
                     <p className="text-sm text-muted-foreground">
-                      This cancels the unpaid balance of {money(outstanding, expense.currency)}. Recorded payments remain in the expense history.
+                      This cancels the unpaid balance of {money(outstanding, expense.currency)}.
+                      Recorded payments remain in the expense history.
                     </p>
                     <Field label="Cancellation reason" htmlFor="reimbursement-cancellation-reason">
-                      <Textarea id="reimbursement-cancellation-reason" required minLength={3} maxLength={500}
-                        value={cancellationReason} onChange={(e) => setCancellationReason(e.target.value)} />
+                      <Textarea
+                        id="reimbursement-cancellation-reason"
+                        required
+                        minLength={3}
+                        maxLength={500}
+                        value={cancellationReason}
+                        onChange={(e) => setCancellationReason(e.target.value)}
+                      />
                     </Field>
                     <div className="flex flex-wrap justify-end gap-2">
-                      <Button type="button" variant="outline" disabled={busy} onClick={() => setShowCancellation(false)}>Keep reimbursement</Button>
-                      <Button type="submit" variant="destructive" disabled={busy || cancellationReason.trim().length < 3}>Confirm cancellation</Button>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        disabled={busy}
+                        onClick={() => setShowCancellation(false)}
+                      >
+                        Keep reimbursement
+                      </Button>
+                      <Button
+                        type="submit"
+                        variant="destructive"
+                        disabled={busy || cancellationReason.trim().length < 3}
+                      >
+                        Confirm cancellation
+                      </Button>
                     </div>
                   </form>
                 ) : (
-                  <Button type="button" variant="outline" className="w-full" disabled={busy} onClick={() => setShowCancellation(true)}>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="w-full"
+                    disabled={busy}
+                    onClick={() => setShowCancellation(true)}
+                  >
                     Cancel reimbursement
                   </Button>
-                )
-              )}
+                ))}
             </CardContent>
           </Card>
 
@@ -338,7 +379,7 @@ export default function ExpenseDetailPage() {
                 <p className="text-sm text-muted-foreground">No receipts attached.</p>
               )}
               {attachments?.map((a) => (
-                <div key={a.id} className="overflow-hidden rounded-lg border">
+                <div key={a.id} className="overflow-hidden rounded-xl ring-1 ring-black/[0.06]">
                   <div className="flex items-center gap-2 p-3">
                     <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-muted text-muted-foreground">
                       <FileText className="h-4 w-4" />
@@ -394,7 +435,7 @@ export default function ExpenseDetailPage() {
               {canManageReceipts && (attachments?.length ?? 0) < MAX_RECEIPTS && (
                 <label
                   className={cn(
-                    'flex cursor-pointer flex-col items-center gap-1.5 rounded-lg border border-dashed p-6 text-center transition-colors hover:border-primary hover:bg-accent/40 focus-within:ring-2 focus-within:ring-ring',
+                    'flex cursor-pointer flex-col items-center gap-1.5 rounded-xl border border-dashed p-6 text-center transition-colors hover:border-primary hover:bg-accent/40 focus-within:ring-2 focus-within:ring-ring',
                     busy && 'pointer-events-none opacity-60',
                   )}
                 >
@@ -493,11 +534,20 @@ export default function ExpenseDetailPage() {
             </Card>
           )}
 
-          <Card>
-            <CardHeader>
-              <CardTitle>Activity</CardTitle>
-            </CardHeader>
-            <CardContent>
+          {/* History is useful but rarely needed, so it stays closed until asked for. */}
+          <details className="group rounded-2xl bg-card shadow-sm ring-1 ring-black/[0.03]">
+            <summary className="flex cursor-pointer list-none items-center justify-between px-5 py-4 text-sm font-medium [&::-webkit-details-marker]:hidden">
+              <span>
+                Activity
+                {expense.history?.length ? (
+                  <span className="ml-2 font-normal text-muted-foreground">
+                    {expense.history.length} {expense.history.length === 1 ? 'event' : 'events'}
+                  </span>
+                ) : null}
+              </span>
+              <ChevronDown className="h-4 w-4 text-muted-foreground transition-transform group-open:rotate-180" />
+            </summary>
+            <div className="border-t p-5 sm:p-6">
               {expense.history?.length ? (
                 <ol className="ml-2 space-y-5 border-l pl-6">
                   {expense.history.map((h) => (
@@ -520,8 +570,8 @@ export default function ExpenseDetailPage() {
               ) : (
                 <p className="text-sm text-muted-foreground">No activity yet.</p>
               )}
-            </CardContent>
-          </Card>
+            </div>
+          </details>
         </div>
       </div>
     </div>

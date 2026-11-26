@@ -2,7 +2,11 @@ import { useState, type FormEvent } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { Eye, RefreshCw, Send } from 'lucide-react';
 import { useApiQuery, writeApi } from '@/lib/api-query';
-import { ExpenseDetailsFields, emptyExpenseDetails, expenseDetailsPayload } from '@/components/common/expense-details-fields';
+import {
+  ExpenseDetailsFields,
+  emptyExpenseDetails,
+  expenseDetailsPayload,
+} from '@/components/common/expense-details-fields';
 import { useAuth } from '@/context/auth-context';
 import { money, formatDate, todayIso, label } from '@/lib/format';
 import { FREQUENCIES } from '@/lib/constants';
@@ -181,7 +185,10 @@ export default function TrackerDetailPage() {
                   onClick={() =>
                     run(
                       () =>
-                        writeApi(`/trackers/${trackerId}/submit-drafts`, { method: 'POST', json: {} }),
+                        writeApi(`/trackers/${trackerId}/submit-drafts`, {
+                          method: 'POST',
+                          json: {},
+                        }),
                       'Drafts submitted for approval',
                     )
                   }
@@ -217,7 +224,7 @@ export default function TrackerDetailPage() {
         </div>
       )}
 
-      <div className="grid gap-6 lg:grid-cols-3">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
         <div className="space-y-6 lg:col-span-2">
           <Card>
             <CardHeader>
@@ -499,7 +506,11 @@ export default function TrackerDetailPage() {
                       onChange={(e) => setExpDesc(e.target.value)}
                     />
                   </Field>
-                  <ExpenseDetailsFields id="budget-expense" value={expenseDetails} onChange={setExpenseDetails} />
+                  <ExpenseDetailsFields
+                    id="budget-expense"
+                    value={expenseDetails}
+                    onChange={setExpenseDetails}
+                  />
                   <Button
                     type="submit"
                     variant="secondary"

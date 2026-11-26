@@ -32,13 +32,21 @@ export function expenseDetailsPayload(details: ExpenseDetails) {
   };
 }
 
-export function ExpenseDetailsFields({ value, onChange, id }: {
+export function ExpenseDetailsFields({
+  value,
+  onChange,
+  id,
+}: {
   value: ExpenseDetails;
   onChange: (details: ExpenseDetails) => void;
   id: string;
 }) {
-  const { data: requesters, error, loading, reload } =
-    useApiQuery<ExpenseRequester[]>('/users/expense-requesters');
+  const {
+    data: requesters,
+    error,
+    loading,
+    reload,
+  } = useApiQuery<ExpenseRequester[]>('/users/expense-requesters');
 
   return (
     <>
@@ -50,19 +58,30 @@ export function ExpenseDetailsFields({ value, onChange, id }: {
               value={value.toldBySelection}
               onChange={(e) => {
                 const toldBySelection = e.target.value;
-                const toldBy = requesters?.find((person) => person.id === toldBySelection)?.name ?? '';
+                const toldBy =
+                  requesters?.find((person) => person.id === toldBySelection)?.name ?? '';
                 onChange({ ...value, toldBySelection, toldBy });
               }}
             >
-              <option value="">{loading && !requesters ? 'Loading team members…' : 'Select a team member'}</option>
-              {value.toldBySelection === SAVED_NAME && <option value={SAVED_NAME}>{value.toldBy}</option>}
-              {requesters?.map((person) => <option key={person.id} value={person.id}>{person.name}</option>)}
+              <option value="">
+                {loading && !requesters ? 'Loading team members…' : 'Select a team member'}
+              </option>
+              {value.toldBySelection === SAVED_NAME && (
+                <option value={SAVED_NAME}>{value.toldBy}</option>
+              )}
+              {requesters?.map((person) => (
+                <option key={person.id} value={person.id}>
+                  {person.name}
+                </option>
+              ))}
               <option value={SOMEONE_ELSE}>Someone else</option>
             </Select>
             {error && (
               <p className="text-xs text-muted-foreground">
                 Could not load team members.{' '}
-                <button type="button" onClick={reload} className="font-medium underline">Retry</button>
+                <button type="button" onClick={reload} className="font-medium underline">
+                  Retry
+                </button>
               </p>
             )}
           </Field>
@@ -80,11 +99,22 @@ export function ExpenseDetailsFields({ value, onChange, id }: {
           )}
         </div>
         <Field label="Paid to" htmlFor={`${id}-paid-to`}>
-          <Input id={`${id}-paid-to`} maxLength={120} value={value.paidTo} onChange={(e) => onChange({ ...value, paidTo: e.target.value })} />
+          <Input
+            id={`${id}-paid-to`}
+            maxLength={120}
+            value={value.paidTo}
+            onChange={(e) => onChange({ ...value, paidTo: e.target.value })}
+          />
         </Field>
       </div>
       <Field label="Reason" htmlFor={`${id}-reason`}>
-        <Textarea id={`${id}-reason`} rows={2} maxLength={500} value={value.reason} onChange={(e) => onChange({ ...value, reason: e.target.value })} />
+        <Textarea
+          id={`${id}-reason`}
+          rows={2}
+          maxLength={500}
+          value={value.reason}
+          onChange={(e) => onChange({ ...value, reason: e.target.value })}
+        />
       </Field>
     </>
   );

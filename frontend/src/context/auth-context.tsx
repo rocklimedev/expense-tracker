@@ -1,11 +1,4 @@
-import {
-  createContext,
-  useCallback,
-  useContext,
-  useEffect,
-  useMemo,
-  type ReactNode,
-} from 'react';
+import { createContext, useCallback, useContext, useEffect, useMemo, type ReactNode } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import type { FetchBaseQueryError } from '@reduxjs/toolkit/query';
 import { tokenStore } from '@/lib/api';
@@ -31,22 +24,28 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const user = session.currentData ?? null;
   const loading = signedIn && !user && !session.isError;
 
-  const login = useCallback(async (email: string, password: string) => {
-    try {
-      const { accessToken } = await dispatch(
-        serverApi.endpoints.login.initiate({ email, password }, { track: false }),
-      ).unwrap();
-      tokenStore.set(accessToken);
-      await dispatch(
-        serverApi.endpoints.currentUser.initiate(undefined, { subscribe: false, forceRefetch: true }),
-      ).unwrap();
-      dispatch(setSignedIn(true));
-    } catch (error) {
-      tokenStore.clear();
-      dispatch(serverApi.util.resetApiState());
-      throw new Error(requestMessage(error as FetchBaseQueryError));
-    }
-  }, [dispatch]);
+  const login = useCallback(
+    async (email: string, password: string) => {
+      try {
+        const { accessToken } = await dispatch(
+          serverApi.endpoints.login.initiate({ email, password }, { track: false }),
+        ).unwrap();
+        tokenStore.set(accessToken);
+        await dispatch(
+          serverApi.endpoints.currentUser.initiate(undefined, {
+            subscribe: false,
+            forceRefetch: true,
+          }),
+        ).unwrap();
+        dispatch(setSignedIn(true));
+      } catch (error) {
+        tokenStore.clear();
+        dispatch(serverApi.util.resetApiState());
+        throw new Error(requestMessage(error as FetchBaseQueryError));
+      }
+    },
+    [dispatch],
+  );
 
   const logout = useCallback(() => {
     tokenStore.clear();

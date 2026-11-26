@@ -41,8 +41,10 @@ export function Receipt({
       <dl className="space-y-3 px-6 py-5 text-sm">
         {lines.map((l) => (
           <div key={l.label} className="flex items-baseline justify-between gap-4">
-              <dt className="shrink-0 text-muted-foreground">{l.label}</dt>
-              <dd className="min-w-0 whitespace-pre-line break-words text-right font-medium">{l.value}</dd>
+            <dt className="shrink-0 text-muted-foreground">{l.label}</dt>
+            <dd className="min-w-0 whitespace-pre-line break-words text-right font-medium">
+              {l.value}
+            </dd>
           </div>
         ))}
       </dl>
@@ -54,9 +56,9 @@ export function Receipt({
       </div>
 
       <div className="px-6 pb-6 pt-6">
-        <div className="flex items-end justify-between gap-4">
-          <span className="pb-2 text-sm font-medium text-muted-foreground">Total claimed</span>
-          <span className="text-4xl font-semibold tabular-nums tracking-tight sm:text-5xl">
+        <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+          <span className="text-sm font-medium text-muted-foreground">Total claimed</span>
+          <span className="min-w-0 text-3xl font-semibold tabular-nums tracking-tight [overflow-wrap:anywhere] sm:text-5xl">
             {money(amount, currency)}
           </span>
         </div>
