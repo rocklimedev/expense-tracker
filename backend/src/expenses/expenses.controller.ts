@@ -60,6 +60,18 @@ export class ExpensesController {
     return this.expenses.approvedForMe(req.user);
   }
 
+  @Get('transactions')
+  @RequirePermissions(Permissions.EXPENSE_VIEW_ALL)
+  allTransactions() {
+    return this.expenses.transactionExpenses();
+  }
+
+  @Get('transactions/:employeeId')
+  @RequirePermissions(Permissions.USER_MANAGE, Permissions.EXPENSE_VIEW_ALL)
+  userTransactions(@Param('employeeId', ParseUUIDPipe) employeeId: string) {
+    return this.expenses.userTransactions(employeeId);
+  }
+
   @Post('batch/approve')
   @RequirePermissions(Permissions.EXPENSE_BATCH_APPROVE, Permissions.EXPENSE_APPROVE)
   batchApprove(@Req() req, @Body() dto: BatchApproveDto) {

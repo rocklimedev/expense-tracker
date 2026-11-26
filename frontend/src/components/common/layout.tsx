@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Link, Navigate, NavLink, Outlet, useNavigate } from 'react-router-dom';
 import {
+  Activity,
   Banknote,
   ChartNoAxesColumn,
   ClipboardCheck,
@@ -9,6 +10,7 @@ import {
   PiggyBank,
   Plus,
   Receipt,
+  List,
   ShieldCheck,
   UserRound,
   UserRoundCog,
@@ -25,6 +27,11 @@ interface NavItem {
   label: string;
   icon: LucideIcon;
   perms: string[];
+  requireAll?: boolean;
+}
+
+function canOpen(item: NavItem, can: (permission: string) => boolean) {
+  return item.requireAll ? item.perms.every(can) : item.perms.some(can);
 }
 
 const GROUPS: { title: string; items: NavItem[] }[] = [
@@ -51,6 +58,7 @@ const GROUPS: { title: string; items: NavItem[] }[] = [
       { to: '/approvals', label: 'To approve', icon: ClipboardCheck, perms: ['expense.approve'] },
       { to: '/payments', label: 'Reimbursements', icon: Banknote, perms: ['payment.record'] },
       { to: '/reports', label: 'Reports', icon: ChartNoAxesColumn, perms: ['expense.view.all'] },
+      { to: '/transactions', label: 'Transactions', icon: List, perms: ['expense.view.all'] },
     ],
   },
   {
@@ -63,6 +71,7 @@ const GROUPS: { title: string; items: NavItem[] }[] = [
         perms: ['approval.policy.manage'],
       },
       { to: '/users', label: 'Team', icon: Users, perms: ['user.manage'] },
+      { to: '/activity', label: 'Activity log', icon: Activity, perms: ['user.manage', 'expense.view.all'], requireAll: true },
       {
         to: '/roles',
         label: 'Roles & Permissions',
@@ -75,7 +84,7 @@ const GROUPS: { title: string; items: NavItem[] }[] = [
 
 export function AppHome() {
   const { can } = useAuth();
-  const firstPage = GROUPS.flatMap((group) => group.items).find((item) => item.perms.some(can));
+  const firstPage = GROUPS.flatMap((group) => group.items).find((item) => canOpen(item, can));
   if (firstPage) return <Navigate to={firstPage.to} replace />;
   if (can('expense.create')) return <Navigate to="/expenses/new" replace />;
   return (
@@ -227,13 +236,13 @@ export function AppLayout() {
 
   const groups = GROUPS.map((g) => ({
     ...g,
-    items: g.items.filter((i) => i.perms.some((p) => can(p))),
+    items: g.items.filter((item) => canOpen(item, can)),
   })).filter((g) => g.items.length > 0);
   const mobileTabs = [
     ...groups
       .flatMap((g) => g.items)
       .slice(0, 4)
-      .map(({ to, label, icon }) => ({
+          .map(({ to, label, icon }) => ({
         to,
         label: to === '/payments' ? 'Payments' : label,
         icon,

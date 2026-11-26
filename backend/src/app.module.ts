@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { APP_INTERCEPTOR } from '@nestjs/core';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { ScheduleModule } from '@nestjs/schedule';
 import { SequelizeModule } from '@nestjs/sequelize';
@@ -9,6 +10,9 @@ import { ExpensesModule } from './expenses/expenses.module';
 import { PaymentsModule } from './payments/payments.module';
 import { AttachmentsModule } from './attachments/attachments.module';
 import { TrackersModule } from './trackers/trackers.module';
+import { ActivityController } from './activity/activity.controller';
+import { ActivityEntry } from './activity/activity-entry.model';
+import { ActivityInterceptor } from './activity/activity.interceptor';
 
 @Module({
   imports: [
@@ -37,6 +41,9 @@ import { TrackersModule } from './trackers/trackers.module';
     PaymentsModule,
     AttachmentsModule,
     TrackersModule,
+    SequelizeModule.forFeature([ActivityEntry]),
   ],
+  controllers: [ActivityController],
+  providers: [{ provide: APP_INTERCEPTOR, useClass: ActivityInterceptor }],
 })
 export class AppModule {}

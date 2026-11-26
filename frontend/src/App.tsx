@@ -15,6 +15,9 @@ import RolesPage from './pages/roles-page';
 import ProfilePage from './pages/profile-page';
 import ReportsPage from './pages/reports-page';
 import BatchExpensePage from './pages/batch-expense-page';
+import UserTransactionsPage from './pages/user-transactions-page';
+import TransactionsPage from './pages/transactions-page';
+import ActivityPage from './pages/activity-page';
 
 export default function App() {
   return (
@@ -35,6 +38,14 @@ export default function App() {
           <RequirePermission permission="expense.create"><BatchExpensePage /></RequirePermission>
         } />
         <Route path="expenses/:id" element={<ExpenseDetailPage />} />
+        <Route
+          path="transactions"
+          element={
+            <RequirePermission permission="expense.view.all">
+              <TransactionsPage />
+            </RequirePermission>
+          }
+        />
         <Route
           path="reports"
           element={
@@ -74,6 +85,22 @@ export default function App() {
           element={
             <RequirePermission permission="user.manage">
               <UsersPage />
+            </RequirePermission>
+          }
+        />
+        <Route
+          path="users/:employeeId/transactions"
+          element={
+            <RequirePermission permission="user.manage" alsoRequire="expense.view.all">
+              <UserTransactionsPage />
+            </RequirePermission>
+          }
+        />
+        <Route
+          path="activity"
+          element={
+            <RequirePermission permission="user.manage" alsoRequire="expense.view.all">
+              <ActivityPage />
             </RequirePermission>
           }
         />

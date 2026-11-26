@@ -292,6 +292,25 @@ export class ExpensesService {
     });
   }
 
+  async userTransactions(employeeId: string) {
+    const employee = await User.findByPk(employeeId, { attributes: ['id', 'name', 'isActive'] });
+    if (!employee) throw new NotFoundException('User not found');
+    const expenses = await this.transactionExpenses(employeeId);
+    return { employee, expenses };
+  }
+
+  transactionExpenses(employeeId?: string) {
+    return Expense.findAll({
+      where: employeeId ? { employeeId } : undefined,
+      attributes: ['id', 'category', 'description', 'expenseDate', 'currency', 'amount', 'status'],
+      include: [
+        { model: User, attributes: ['id', 'name'] },
+        { model: Payment, attributes: ['id', 'amount', 'paidOn', 'reference'] },
+      ],
+      order: [['expenseDate', 'DESC'], ['id', 'DESC']],
+    });
+  }
+
   async list(actor: AuthUser, filters: { status?: ExpenseStatus; employeeId?: string }) {
     const where: Record<string, unknown> = {};
     if (filters.status) where.status = filters.status;

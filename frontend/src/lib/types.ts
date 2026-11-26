@@ -82,6 +82,11 @@ export interface Payment {
   recordedById: string;
 }
 
+export type TransactionExpense = Pick<
+  Expense,
+  'id' | 'category' | 'description' | 'expenseDate' | 'currency' | 'amount' | 'status' | 'employee'
+> & { payments: Pick<Payment, 'id' | 'amount' | 'paidOn' | 'reference'>[] };
+
 export interface Tracker {
   id: string;
   employeeId: string;

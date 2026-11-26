@@ -307,14 +307,16 @@ export class TrackersService {
       include: [{ model: TrackerSchedule, where: { active: true }, required: true }],
     });
 
+    let generated = 0;
     for (const tracker of trackers) {
       try {
-        await this.generateForTracker(tracker);
+        const schedules = await this.generateForTracker(tracker);
+        generated += schedules.reduce((count, schedule) => count + schedule.occurrences.length, 0);
       } catch (err) {
         this.logger.error(`Generation failed for tracker ${tracker.id}: ${(err as Error).message}`);
       }
     }
-    return { processed: trackers.length };
+    return { processed: trackers.length, generated };
   }
 
   // ---------- Bulk submit ----------

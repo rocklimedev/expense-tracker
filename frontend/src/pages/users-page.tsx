@@ -1,5 +1,6 @@
 import { useEffect, useId, useRef, useState, type FormEvent } from 'react';
 import { Ellipsis, Plus } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import { useAuth } from '@/context/auth-context';
 import { useApiQuery, writeApi } from '@/lib/api-query';
 import { label } from '@/lib/format';
@@ -22,7 +23,7 @@ import { PageHeader } from '@/components/common/page-header';
 import { StatusBadge } from '@/components/common/status-badge';
 
 export default function UsersPage() {
-  const { user, logout } = useAuth();
+  const { user, logout, can } = useAuth();
   const { data, error } = useApiQuery<AppUser[]>('/users');
   const { data: roles, error: rolesError } =
     useApiQuery<NonNullable<AppUser['role']>[]>('/users/roles');
@@ -189,7 +190,17 @@ export default function UsersPage() {
                   ?.filter((u) => u.isActive)
                   .map((u) => (
                     <TableRow key={u.id}>
-                      <TableCell className="font-medium">{u.name}</TableCell>
+                      <TableCell className="font-medium">
+                        {can('expense.view.all') ? (
+                          <Link
+                            to={`/users/${u.id}/transactions`}
+                            aria-label={`View transactions for ${u.name}`}
+                            className="text-primary underline underline-offset-2"
+                          >
+                            {u.name}
+                          </Link>
+                        ) : u.name}
+                      </TableCell>
                       <TableCell className="[overflow-wrap:anywhere]">{u.email}</TableCell>
                       <TableCell>{u.role ? label(u.role.name) : '—'}</TableCell>
                       <TableCell>

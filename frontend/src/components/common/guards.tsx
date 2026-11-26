@@ -12,13 +12,15 @@ export function RequireAuth({ children }: { children: ReactNode }) {
 
 export function RequirePermission({
   permission,
+  alsoRequire,
   children,
 }: {
   permission: string;
+  alsoRequire?: string;
   children: ReactNode;
 }) {
   const { can } = useAuth();
-  if (!can(permission)) {
+  if (!can(permission) || (alsoRequire && !can(alsoRequire))) {
     return (
       <Card>
         <CardContent className="pt-6 text-sm text-muted-foreground">

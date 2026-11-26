@@ -21,6 +21,7 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { StatusBadge } from '@/components/common/status-badge';
+import { paginateTransactions, TransactionPagination } from '@/components/common/transaction-pagination';
 import { CategoryTile } from '@/components/common/category-tile';
 import { EmptyState } from '@/components/common/empty-state';
 import { Notice } from '@/components/common/notice';
@@ -67,6 +68,7 @@ export default function ExpensesPage() {
   const { data, error, loading } = useApiQuery<Expense[]>('/expenses');
   const [filter, setFilter] = useState<Filter>('ALL');
   const [query, setQuery] = useState('');
+  const [page, setPage] = useState(1);
 
   const all = useMemo(() => data ?? [], [data]);
   const showEmployee = can('expense.view.all');
@@ -111,7 +113,17 @@ export default function ExpensesPage() {
         .sort((a, b) => b.expenseDate.localeCompare(a.expenseDate)),
     [all, activeFilter, q],
   );
-  const groups = useMemo(() => groupByDay(rows), [rows]);
+  const pagination = paginateTransactions(rows, page);
+  const groups = groupByDay(pagination.rows);
+  const dayTotals = useMemo(() => {
+    const totals = new Map<string, number>();
+    for (const expense of rows) {
+      if (isSpend(expense)) {
+        totals.set(expense.expenseDate, (totals.get(expense.expenseDate) ?? 0) + num(expense.amount));
+      }
+    }
+    return totals;
+  }, [rows]);
 
   const newButton = can('expense.create') && (
     <Button onClick={() => navigate('/expenses/new')}>
@@ -205,7 +217,7 @@ export default function ExpensesPage() {
       </details>
 
       {/* Transactions: search, three filters, then the list grouped by day. */}
-      <Card className="overflow-hidden">
+      <Card id="expense-transactions" className="scroll-mt-16 overflow-hidden">
         <div className="space-y-4 p-4 sm:p-5">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <h2 className="px-1 font-semibold tracking-tight">Transactions</h2>
@@ -216,7 +228,10 @@ export default function ExpensesPage() {
                 placeholder="Search spending"
                 aria-label="Search spending"
                 value={query}
-                onChange={(e) => setQuery(e.target.value)}
+                onChange={(e) => {
+                  setQuery(e.target.value);
+                  setPage(1);
+                }}
               />
             </div>
           </div>
@@ -232,7 +247,10 @@ export default function ExpensesPage() {
                   key={f.value}
                   type="button"
                   aria-pressed={active}
-                  onClick={() => setFilter(f.value)}
+                  onClick={() => {
+                    setFilter(f.value);
+                    setPage(1);
+                  }}
                   className={cn(
                     'shrink-0 rounded-full px-3.5 py-1.5 text-sm font-medium transition-colors',
                     active
@@ -248,7 +266,7 @@ export default function ExpensesPage() {
         </div>
 
         {groups.map((g) => {
-          const dayTotal = g.items.filter(isSpend).reduce((s, e) => s + num(e.amount), 0);
+          const dayTotal = dayTotals.get(g.date) ?? 0;
           return (
             <section key={g.date} aria-label={dayHeading(g.date)}>
               <div className="flex items-baseline justify-between px-5 pb-1 pt-4">
@@ -320,6 +338,7 @@ export default function ExpensesPage() {
                   onClick={() => {
                     setQuery('');
                     setFilter('ALL');
+                    setPage(1);
                   }}
                 >
                   Show all transactions
@@ -327,6 +346,7 @@ export default function ExpensesPage() {
               }
             />
           ))}
+        <TransactionPagination pagination={pagination} onPageChange={setPage} scrollTarget="expense-transactions" />
       </Card>
 
       {/* On phones, the main action stays reachable above the tab bar. */}

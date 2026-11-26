@@ -68,3 +68,17 @@ mysql -h HOST -u USER -p DB_NAME < backend/migrations/004-expense-details-and-re
 Batch entry creates up to 25 drafts in one transaction. A user with payment-recording
 permission can cancel the unpaid balance on an approved or partially paid expense.
 The cancellation reason appears in the expense and its activity history.
+
+## Enable the system activity log
+
+Apply migration 007 before deploying the updated production API. Development databases
+with Sequelize synchronization enabled create the table automatically.
+
+```sh
+mysql -h HOST -u USER -p DB_NAME < backend/migrations/007-activity-entries.sql
+```
+
+The activity log starts recording after deployment. It records successful sign-ins,
+completed write requests, and scheduled recurring expense generation. It stores the
+actor, action, resource, and timestamp. Request bodies, passwords, tokens, and receipt
+contents are excluded.

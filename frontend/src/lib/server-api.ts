@@ -66,7 +66,7 @@ export const serverApi = createApi({
     write: build.mutation<unknown, WriteRequest>({
       query: ({ path, method, json, body }) => ({ url: path, method, body: json ?? body }),
       invalidatesTags: (_result, error, { path }) =>
-        error ? [] : writeTags(path).map((id) => ({ type: 'Resource', id })),
+        error ? [] : [...writeTags(path), 'activity'].map((id) => ({ type: 'Resource', id })),
     }),
     currentUser: build.query<Me, void>({ query: () => '/auth/me' }),
     login: build.mutation<{ accessToken: string }, { email: string; password: string }>({
